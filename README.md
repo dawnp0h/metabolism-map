@@ -9,6 +9,6 @@ An interactive STEP 1 biochemistry map: glycolysis, TCA, urea cycle, amino acids
 - **Clear highlight** resets the view
 
 ## Live site
-https://YOUR-USERNAME.github.io/metabolism-map/
+https://dawnp0h.github.io/metabolism-map/
 
 The whole map is a single self-contained `index.html` (no build step, no dependencies besides the Inter web font).

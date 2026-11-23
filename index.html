@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Integrated Metabolism Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#1f2328; --muted:#5f6670; --bg:#fbfaf7; --line:#d9d6cf; --accent:#c0392b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Inter, system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+  header { padding:20px 24px 8px; display:flex; flex-wrap:wrap; gap:12px 28px; align-items:flex-end; justify-content:space-between; }
+  h1 { font-size:22px; margin:0; letter-spacing:-.01em; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:16.2px; max-width:720px; }
+  .tools { display:flex; gap:6px; align-items:center; }
+  .tools button { font:inherit; font-size:13px; border:1px solid var(--line); background:#fff; border-radius:8px; padding:6px 11px; cursor:pointer; }
+  .tools button:hover { background:#f1efe9; }
+  .legend { padding:4px 24px 10px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:15.0px; }
+  .legend .lab { color:var(--muted); margin-right:4px; }
+  .vit { font:inherit; font-size:15.0px; border:1px solid var(--line); background:#fff; border-radius:999px; padding:4px 10px 4px 7px; cursor:pointer; display:inline-flex; gap:6px; align-items:center; }
+  .vit.on { border-color:#222; background:#222; color:#fff; }
+  .dot { width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .key { display:inline-flex; gap:6px; align-items:center; margin-left:10px; color:var(--muted); }
+  .key .b { background:#5d7f8f; color:#fff; font-size:10.5px; padding:0 4px; border-radius:3px; font-weight:600; }
+  #wrap { margin:0 16px; border:1px solid var(--line); border-radius:12px; background:#fff; overflow:auto; height:78vh; cursor:grab; }
+  #wrap.drag { cursor:grabbing; }
+  #map { display:block; font-family:Inter, system-ui, sans-serif; }
+  .panel { stroke:none; }
+  .ptitle { font-size:19.2px; font-weight:700; fill:#2a2f36; }
+  .node rect { fill:#fff; stroke:#8a8f98; stroke-width:1; }
+  .node.hub rect { fill:#fff; stroke:#2a2f36; stroke-width:1.4; }
+  .node text { font-size:15.0px; text-anchor:middle; fill:#1f2328; font-weight:500; }
+  .node.hub text { font-weight:600; }
+  .node.sm text { font-size:11.5px; }
+  .node.sm rect { stroke:#8a8f98; }
+  .node.sm.hub rect { stroke:#2a2f36; stroke-width:1.4; }
+  .node.sm.hub text { font-weight:500; }
+  .edge { fill:none; stroke:#3b3b3b; stroke-width:1.4; }
+  .edge.dash { stroke-dasharray:5 4; stroke:#6b6f76; }
+  .edge.redl { stroke:#c0392b; }
+  .lbg { fill:transparent; }
+  .et { font-size:12.6px; fill:#b03a2e; font-weight:500; }
+  .badge rect { fill:#5d7f8f; }
+  .dzname { font-size:10.5px; fill:#3f5f6e; font-weight:600; }
+  .badge text { font-size:11.4px; fill:#fff; font-weight:700; text-anchor:middle; }
+  .note { font-size:12.6px; fill:#4d535b; }
+  .notebold { font-size:13.2px; fill:#2a2f36; font-weight:700; }
+  .drug { font-size:12.6px; fill:#b03a2e; font-style:italic; }
+  .enzt { font-size:12.6px; fill:#b03a2e; font-weight:500; }
+  .membrane { fill:#d9cfc0; stroke:#b9ab96; stroke-dasharray:3 3; }
+  svg.dim .enz { opacity:.18; }
+  svg.dim .enz.hl { opacity:1; }
+  svg.dim .enz.hl .lbg { fill:#fff3b0; stroke:#e0b400; }
+  svg.dim .enz.hl .et { font-weight:700; }
+  svg.dim .edge { opacity:.35; }
+  .enz { cursor:pointer; }
+  main { display:grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); gap:20px; padding:22px 24px 40px; }
+  @media (max-width: 900px) { main { grid-template-columns:1fr; } #wrap { height:65vh; } }
+  h2 { font-size:15px; margin:0 0 10px; }
+  .dzgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:6px; }
+  .dz { font:inherit; text-align:left; display:flex; gap:9px; align-items:flex-start; border:1px solid var(--line); background:#fff; border-radius:8px; padding:7px 9px; cursor:pointer; }
+  .dz:hover { background:#f6f4ee; }
+  .dz.on { border-color:#e0b400; background:#fff8d6; }
+  .dz .num { background:#5d7f8f; color:#fff; font-size:11px; font-weight:700; border-radius:4px; min-width:22px; text-align:center; padding:2px 0; }
+  .dz b { font-size:15.0px; display:block; font-weight:600; }
+  .dz small { font-size:13.8px; color:var(--muted); }
+  .cards { display:grid; gap:12px; align-content:start; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-size:15.6px; }
+  .card h3 { margin:0 0 8px; font-size:16.2px; }
+  .card table { border-collapse:collapse; width:100%; }
+  .card td { padding:3px 4px; border-top:1px solid #eee; vertical-align:top; }
+  .card td:first-child { color:var(--muted); width:46%; }
+  .hint { color:var(--muted); font-size:12px; margin:0 24px 0; padding-top:6px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Integrated Metabolism Map</h1>
+    <p>Pathways, enzymes, inherited disorders (numbered) and vitamin cofactors on one page. Click a disorder or vitamin to highlight where it acts. ★ = rate-limiting / key regulated step. Drag to pan.</p>
+  </div>
+  <div class="tools">
+    <button id="zo" aria-label="Zoom out">−</button>
+    <button id="zf">Fit</button>
+    <button id="zi" aria-label="Zoom in">+</button>
+    <button id="clr">Clear highlight</button>
+  </div>
+</header>
+<div class="legend"><span class="lab">Cofactors:</span><button class="vit" data-v="B1"><span class="dot" style="background:#e8692c"></span>Thiamine (B1)</button><button class="vit" data-v="B2"><span class="dot" style="background:#4e8d8a"></span>Riboflavin (B2)</button><button class="vit" data-v="B3"><span class="dot" style="background:#f2a93b"></span>Niacin (B3)</button><button class="vit" data-v="B5"><span class="dot" style="background:#6b4ea0"></span>Pantothenic acid (B5)</button><button class="vit" data-v="B6"><span class="dot" style="background:#d6338a"></span>Pyridoxine (B6)</button><button class="vit" data-v="B7"><span class="dot" style="background:#2f3542"></span>Biotin (B7)</button><button class="vit" data-v="B9"><span class="dot" style="background:#3aa6dd"></span>Folate (B9)</button><button class="vit" data-v="B12"><span class="dot" style="background:#9bb52f"></span>Cobalamin (B12)</button>
+  <span class="key"><span class="b">#</span> disorder</span>
+  <span class="key"><span style="color:#b03a2e">red</span> enzyme / inhibitor</span>
+  <span class="key">- - - indirect / transport</span>
+</div>
+<div id="wrap"><svg id="map" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2300 3364" role="img" aria-label="Integrated map of human metabolic pathways with enzymes, inherited disorders and vitamin cofactors">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#3b3b3b"/></marker><marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#c0392b"/></marker></defs>
+<rect x="10" y="10" width="450" height="712" rx="10" fill="#f7e4e1" class="panel"/>
+<text x="22" y="34" class="ptitle">Pyrimidine synthesis</text>
+<rect x="470" y="10" width="520" height="400" rx="10" fill="#e4edd3" class="panel"/>
+<text x="482" y="34" class="ptitle">Pentose phosphate pathway (HMP shunt)</text>
+<rect x="470" y="418" width="520" height="304" rx="10" fill="#e1e2e7" class="panel"/>
+<text x="482" y="442" class="ptitle">Purine synthesis</text>
+<rect x="1000" y="10" width="320" height="1091" rx="10" fill="#f8ecc8" class="panel"/>
+<text x="1012" y="34" class="ptitle">Glycolysis &amp; gluconeogenesis</text>
+<rect x="1330" y="10" width="960" height="376" rx="10" fill="#dfe8ef" class="panel"/>
+<text x="1342" y="34" class="ptitle">Glycogen &amp; galactose metabolism</text>
+<rect x="1330" y="396" width="280" height="705" rx="10" fill="#f7e4e1" class="panel"/>
+<text x="1342" y="420" class="ptitle">Fructose metabolism</text>
+<rect x="1620" y="396" width="670" height="705" rx="10" fill="#ecebe7" class="panel"/>
+<text x="1632" y="420" class="ptitle">Fatty acid metabolism</text>
+<rect x="10" y="732" width="980" height="379" rx="10" fill="#e5e8f1" class="panel"/>
+<text x="22" y="756" class="ptitle">Purine salvage &amp; breakdown</text>
+<rect x="1000" y="1111" width="410" height="700" rx="10" fill="#dbe6ed" class="panel"/>
+<text x="1398" y="1135" class="ptitle" text-anchor="end">TCA cycle</text>
+<rect x="1420" y="1111" width="870" height="300" rx="10" fill="#e4edd3" class="panel"/>
+<text x="2278" y="1135" class="ptitle" text-anchor="end">Ketones &amp; cholesterol</text>
+<rect x="1420" y="1421" width="870" height="390" rx="10" fill="#f8ecc8" class="panel"/>
+<text x="1432" y="1442.8" class="ptitle">Cori &amp; Cahill cycles</text>
+<rect x="10" y="1121" width="980" height="440" rx="10" fill="#f8ecc8" class="panel"/>
+<text x="22" y="1145" class="ptitle">Urea cycle</text>
+<rect x="10" y="1571" width="980" height="921" rx="10" fill="#e4edd3" class="panel"/>
+<text x="22" y="1595" class="ptitle">Amino acid metabolism</text>
+<rect x="1000" y="1821" width="1290" height="671" rx="10" fill="#ecebe7" class="panel"/>
+<text x="1012" y="1845" class="ptitle">Organic Acidemia Disorders</text>
+<text x="1012" y="1873" class="ptitle">(Propionate &amp; Homocysteine)</text>
+<rect x="10" y="2502" width="2280" height="250" rx="10" fill="#f3e6ee" class="panel"/>
+<text x="22" y="2526" class="ptitle">Heme synthesis &amp; porphyrias</text>
+<rect x="10" y="2762" width="2280" height="280" rx="10" fill="#eef0e2" class="panel"/>
+<text x="22" y="2786" class="ptitle">Ethanol metabolism</text>
+<rect x="10" y="3052" width="2280" height="302" rx="10" fill="#f1ebe2" class="panel"/>
+<text x="22" y="3076" class="ptitle">Lysosomal storage diseases (sphingolipid &amp; MPS breakdown)</text>
+<rect x="1432" y="1455.5" width="393" height="337.4" rx="14" fill="#f3e3d6" stroke="none"/>
+<rect x="1905" y="1455.5" width="373" height="337.4" rx="14" fill="#efe0cc" stroke="none"/>
+<rect x="1692" y="540" width="590" height="106" rx="8" fill="#f6f3ea" stroke="#b9ab96" stroke-width="1.2" data-tg="1"/>
+<text x="1702" y="556" class="notebold" data-tg="1">Triglyceride metabolism</text>
+<rect x="20" y="1153" width="545" height="184" rx="16" fill="#dcebf2" stroke="none" opacity="0.85"/>
+<rect x="690" y="1607" width="292" height="451" rx="8" fill="#f4f8ec" stroke="#9fb37a" stroke-width="1.2" class="subbox"/>
+<text x="700" y="1629" class="notebold" style="font-size:14px">Other amino-acid derivatives</text>
+<rect x="1626" y="912" width="658" height="26" rx="6" class="membrane"/>
+<text x="1934" y="929" class="note" text-anchor="middle">mitochondrial membranes</text>
+<g class="mnemonic">
+<rect x="1872" y="951" width="166" height="78" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="1880" y="967" class="notebold">Mnemonic</text>
+<text x="1880" y="984" class="note" style="font-size:11.4px">“<tspan font-weight="800" fill="#b03a2e">Sy</tspan>trate” = <tspan font-weight="800" fill="#b03a2e">sy</tspan>nthesis</text>
+<text x="1880" y="1000" class="note" style="font-size:11.4px"><tspan font-weight="800" fill="#b03a2e">Carn</tspan>itine = <tspan font-weight="800" fill="#b03a2e">carn</tspan>age</text>
+<text x="1880" y="1016" class="note" style="font-size:11.4px">of fatty acids</text>
+</g>
+<path d="M264,94 L264,172" class="edge" data-ei="0" data-a="gln" data-b="cp2" marker-end="url(#ah)"/>
+<path d="M264,204 L264,274" class="edge" data-ei="1" data-a="cp2" data-b="oro" marker-end="url(#ah)"/>
+<path d="M264,306 L264,384" class="edge" data-ei="2" data-a="oro" data-b="ump" marker-end="url(#ah)"/>
+<path d="M264,416 L264,434" class="edge" data-ei="3" data-a="ump" data-b="udp" marker-end="url(#ah)"/>
+<path d="M292.8,450 L321.7,450" class="edge" data-ei="4" data-a="udp" data-b="ctp" marker-end="url(#ah)"/>
+<path d="M235.2,450 L185,450 L185,494" class="edge" data-ei="5" data-a="udp" data-b="dudp" marker-end="url(#ah)"/>
+<path d="M185,526 L185,560" class="edge" data-ei="6" data-a="dudp" data-b="dump" marker-end="url(#ah)"/>
+<path d="M220,576 L345.6,576" class="edge" data-ei="7" data-a="dump" data-b="dtmp" marker-end="url(#ah)"/>
+<path d="M351.6,632 L138,632" class="edge" data-ei="8" data-a="dhf" data-b="thf_p" marker-end="url(#ah)"/>
+<path d="M110,616 L110,603 L217.1,603" class="edge dash" data-ei="9" data-a="thf_p" data-b="mthf_p" marker-end="url(#ah)"/>
+<path d="M348.9,603 L380,603 L380,616" class="edge dash" data-ei="10" data-a="mthf_p" data-b="dhf" marker-end="url(#ah)"/>
+<path d="M782.7,75 L670.5,75" class="edge" data-ei="11" data-a="pg" data-b="ru5p" marker-end="url(#ah)"/>
+<path d="M576,91 L576,170 L762.1,170" class="edge" data-ei="12" data-a="ru5p" data-b="r5p" marker-end="url(#ah)"/>
+<path d="M937.9,170 L962,170 L962,224" class="edge" data-ei="13" data-a="r5p" data-b="f6p_h" marker-end="url(#ah)"/>
+<path d="M989,240 L1054.8,240" class="edge dash" data-ei="14" data-a="f6p_h" data-b="f6p" marker-end="url(#ah)"/>
+<path d="M507,241 L507,232" class="edge" data-ei="15" data-a="h_nadph" data-b="h_nadp" marker-end="url(#ah)"/>
+<path d="M523,232 L523,241" class="edge" data-ei="16" data-a="h_nadp" data-b="h_nadph" marker-end="url(#ah)"/>
+<path d="M658,232 L658,241" class="edge" data-ei="17" data-a="h_gssg" data-b="h_gsh" marker-end="url(#ah)"/>
+<path d="M642,241 L642,232" class="edge" data-ei="18" data-a="h_gsh" data-b="h_gssg" marker-end="url(#ah)"/>
+<path d="M785,241 L785,232" class="edge" data-ei="19" data-a="h_h2o2" data-b="h_h2o" marker-end="url(#ah)"/>
+<path d="M850,186 L850,298" class="edge" data-ei="20" data-a="r5p" data-b="prpp_h" marker-end="url(#ah)"/>
+<path d="M850,330 L850,448" class="edge dash" data-ei="21" data-a="prpp_h" data-b="prpp" marker-end="url(#ah)"/>
+<path d="M850,480 L850,512" class="edge" data-ei="22" data-a="prpp" data-b="imp" marker-end="url(#ah)"/>
+<path d="M850,544 L850,554 L770,554 L770,592" class="edge" data-ei="23" data-a="imp" data-b="amp" marker-end="url(#ah)"/>
+<path d="M850,544 L850,554 L950,554 L950,592" class="edge" data-ei="24" data-a="imp" data-b="gmp" marker-end="url(#ah)"/>
+<path d="M817.6,464 L465,464 L465,446 L452.4,446" class="edge dash" data-ei="25" data-a="prpp" data-b="prpp_p" marker-end="url(#ah)"/>
+<path d="M770,624 L770,770" class="edge dash" data-ei="26" data-a="amp" data-b="amp_s" marker-end="url(#ah)"/>
+<path d="M420,462 L420,727 L300,727 L300,824 L256,824 L256,848" class="edge dash" data-ei="27" data-a="prpp_p" data-b="prpp_s" marker-end="url(#ah)"/>
+<path d="M90,802 L90,848" class="edge" data-ei="28" data-a="gmp_s" data-b="guo" marker-end="url(#ah)"/>
+<path d="M90,880 L90,926" class="edge" data-ei="29" data-a="guo" data-b="gua" marker-end="url(#ah)"/>
+<path d="M126.5,926 Q268,864 120.4,799.3" class="edge" data-ei="30" data-a="gua" data-b="gmp_s" marker-end="url(#ah)"/>
+<path d="M420,802 L420,848" class="edge" data-ei="31" data-a="imp_s" data-b="ino" marker-end="url(#ah)"/>
+<path d="M420,880 L420,926" class="edge" data-ei="32" data-a="ino" data-b="hyp" marker-end="url(#ah)"/>
+<path d="M384.3,926 Q246,864 393.2,798" class="edge" data-ei="33" data-a="hyp" data-b="imp_s" marker-end="url(#ah)"/>
+<path d="M739.8,786 L446.8,786" class="edge" data-ei="34" data-a="amp_s" data-b="imp_s" marker-end="url(#ah)"/>
+<path d="M770,802 L770,848" class="edge" data-ei="35" data-a="amp_s" data-b="ado" marker-end="url(#ah)"/>
+<path d="M718.3,864 L459.3,864" class="edge" data-ei="36" data-a="ado" data-b="ino" marker-end="url(#ah)"/>
+<path d="M862,786 L800.2,786" class="edge" data-ei="37" data-a="ade" data-b="amp_s" marker-end="url(#ah)"/>
+<path d="M882.4,464 L995,464 L995,727 L830,727 L830,740" class="edge dash" data-ei="38" data-a="prpp" data-b="prpp_a" marker-end="url(#ah)"/>
+<path d="M90,958 L90,1022 L374.9,1022" class="edge" data-ei="39" data-a="gua" data-b="xan" marker-end="url(#ah)"/>
+<path d="M420,958 L420,1006" class="edge" data-ei="40" data-a="hyp" data-b="xan" marker-end="url(#ah)"/>
+<path d="M465.1,1022 L539.9,1022" class="edge" data-ei="41" data-a="xan" data-b="uric" marker-end="url(#ah)"/>
+<path d="M630.1,1022 L720,1022" class="edge" data-ei="42" data-a="uric" data-b="allan" marker-end="url(#ah)"/>
+<path d="M1162,73 L1162,134" class="edge" data-ei="43" data-a="glc" data-b="g6p" marker-end="url(#ah)"/>
+<path d="M1138,134 L1138,73" class="edge" data-ei="44" data-a="g6p" data-b="glc" marker-end="url(#ah)"/>
+<path d="M1150,166 L1150,224" class="edge" data-ei="45" data-a="g6p" data-b="f6p" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1162,256 L1162,314" class="edge" data-ei="46" data-a="f6p" data-b="f16bp" marker-end="url(#ah)"/>
+<path d="M1138,314 L1138,256" class="edge" data-ei="47" data-a="f16bp" data-b="f6p" marker-end="url(#ah)"/>
+<path d="M1150,346 L1150,375 L1091,375 L1091,404" class="edge" data-ei="48" data-a="f16bp" data-b="g3p" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1150,346 L1150,375 L1255,375 L1255,404" class="edge" data-ei="49" data-a="f16bp" data-b="dhap" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1177.4,420 L1220.7,420" class="edge" data-ei="50" data-a="g3p" data-b="dhap" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1091,436 L1091,448 L1150,448 L1150,484" class="edge" data-ei="51" data-a="g3p" data-b="bpg" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1150,516 L1150,559" class="edge" data-ei="52" data-a="bpg" data-b="pg3" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1150,591 L1150,634" class="edge" data-ei="53" data-a="pg3" data-b="pg2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1150,666 L1150,714" class="edge" data-ei="54" data-a="pg2" data-b="pep" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1150,746 L1150,804" class="edge" data-ei="55" data-a="pep" data-b="pyr" marker-end="url(#ah)"/>
+<path d="M1195.5,820 L1238.1,820" class="edge" data-ei="56" data-a="pyr" data-b="lac" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1150,836 L1150,934" class="edge" data-ei="57" data-a="pyr" data-b="acoa" marker-end="url(#ah)"/>
+<path d="M1600,166 L1600,266" class="edge" data-ei="58" data-a="g1p" data-b="udpg" marker-end="url(#ah)"/>
+<path d="M1539.2,282 L1487.6,282" class="edge" data-ei="59" data-a="udpg" data-b="gly" marker-end="url(#ah)"/>
+<path d="M1457,266 Q1490,235 1560.9,166" class="edge" data-ei="60" data-a="gly" data-b="g1p" marker-end="url(#ah)"/>
+<path d="M1440,298 L1440,306" class="edge" data-ei="61" data-a="gly" data-b="lyso" marker-end="url(#ah)"/>
+<path d="M1477.8,320 L1627.5,320" class="edge" data-ei="62" data-a="lyso" data-b="glc_l" marker-end="url(#ah)"/>
+<path d="M2190,76 L2190,150 L2099.3,150" class="edge" data-ei="63" data-a="lact" data-b="gal" marker-end="url(#ah)"/>
+<path d="M2000.7,150 L1914.2,150" class="edge" data-ei="64" data-a="gal" data-b="gal1p" marker-end="url(#ah)"/>
+<path d="M1785.8,150 L1691.4,150" class="edge" data-ei="65" data-a="gal1p" data-b="g1p" marker-end="url(#ah)"/>
+<path d="M2050,166 L2050,264" class="edge" data-ei="66" data-a="gal" data-b="galtol" marker-end="url(#ah)"/>
+<path d="M1470,470 L1470,506" class="edge" data-ei="67" data-a="suc" data-b="fru" marker-end="url(#ah)"/>
+<path d="M1470,538 L1470,576" class="edge" data-ei="68" data-a="fru" data-b="f1p" marker-end="url(#ah)"/>
+<path d="M1470,608 L1470,646" class="edge" data-ei="69" data-a="f1p" data-b="glyald" marker-end="url(#ah)"/>
+<path d="M1425.1,522 L1393,522" class="edge" data-ei="70" data-a="fru" data-b="f6p_f" marker-end="url(#ah)"/>
+<path d="M1339,522 L1325,522 L1325,240 L1245.2,240" class="edge dash" data-ei="71" data-a="f6p_f" data-b="f6p" marker-end="url(#ah)"/>
+<path d="M1470,678 L1470,716" class="edge" data-ei="72" data-a="glyald" data-b="g3p_f" marker-end="url(#ah)"/>
+<path d="M1745,757 L1745,729" class="edge" data-ei="73" data-a="macoa" data-b="palm" marker-end="url(#ah)"/>
+<path d="M1745,826 L1745,789" class="edge" data-ei="74" data-a="acoa_c" data-b="macoa" marker-end="url(#ah)"/>
+<path d="M1745,881 L1745,858" class="edge" data-ei="75" data-a="cit_c" data-b="acoa_c" marker-end="url(#ah)"/>
+<path d="M1745,949 L1745,939" class="edge" data-ei="76" data-a="cit_m" data-b="cshut" marker-end="url(#ah)"/>
+<path d="M1745,911 L1745,913" class="edge" data-ei="77" data-a="cshut" data-b="cit_c" marker-end="url(#ah)"/>
+<path d="M1745,1022 L1745,981" class="edge" data-ei="78" data-a="acoa_oaa" data-b="cit_m" marker-end="url(#ah)"/>
+<path d="M2115,729 L2115,762" class="edge" data-ei="79" data-a="tg" data-b="fa" marker-end="url(#ah)"/>
+<path d="M2115,794 L2115,829" class="edge" data-ei="80" data-a="fa" data-b="acylcoa" marker-end="url(#ah)"/>
+<path d="M2115,861 L2115,911" class="edge" data-ei="81" data-a="acylcoa" data-b="cpt" marker-end="url(#ah)"/>
+<path d="M2115,939 L2115,974" class="edge" data-ei="82" data-a="cpt" data-b="acylcoa_m" marker-end="url(#ah)"/>
+<path d="M2115,1006 L2115,1045" class="edge" data-ei="83" data-a="acylcoa_m" data-b="acoa_m" marker-end="url(#ah)"/>
+<path d="M1805.4,770 C1990,745 2030,886 2105,886" class="edge dash redl" data-ei="84" data-a="macoa" data-b="cpt"/>
+<path d="M1205.1,950 L1314,950 L1314,1106 L1415,1106 L1415,1171 L1474.9,1171" class="edge dash" data-ei="85" data-a="acoa" data-b="acoa2" marker-end="url(#ah)"/>
+<path d="M1110.4,1236 A144 144 0 0 1 1150.5,1217.5" class="edge" data-ei="86" data-a="oaa" data-b="cit" marker-end="url(#ah)"/>
+<path d="M1229.5,1217.5 A144 144 0 0 1 1269.6,1236" class="edge" data-ei="87" data-a="cit" data-b="icit" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1307.1,1272.2 A144 144 0 0 1 1332.9,1337.9" class="edge" data-ei="88" data-a="icit" data-b="akg" marker-end="url(#ah)"/>
+<path d="M1332.9,1374.1 A144 144 0 0 1 1307.1,1439.8" class="edge" data-ei="89" data-a="akg" data-b="scoa" marker-end="url(#ah)"/>
+<path d="M1269.6,1476 A144 144 0 0 1 1241.3,1490.6" class="edge" data-ei="90" data-a="scoa" data-b="succ" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1138.7,1490.6 A144 144 0 0 1 1110.4,1476" class="edge" data-ei="91" data-a="succ" data-b="fum" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1072.9,1439.8 A144 144 0 0 1 1047.1,1374.1" class="edge" data-ei="92" data-a="fum" data-b="mal" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1047.1,1337.9 A144 144 0 0 1 1072.9,1272.2" class="edge" data-ei="93" data-a="mal" data-b="oaa" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1585.1,1171 L1654.5,1171" class="edge" data-ei="94" data-a="acoa2" data-b="aacoa" marker-end="url(#ah)"/>
+<path d="M1805.5,1171 L1910.1,1171" class="edge" data-ei="95" data-a="aacoa" data-b="hmg" marker-end="url(#ah)"/>
+<path d="M2009.9,1171 L2094.7,1171" class="edge" data-ei="96" data-a="hmg" data-b="mev" marker-end="url(#ah)"/>
+<path d="M2150,1187 L2150,1265" class="edge" data-ei="97" data-a="mev" data-b="chol" marker-end="url(#ah)"/>
+<path d="M1960,1187 L1960,1260" class="edge" data-ei="98" data-a="hmg" data-b="acac" marker-end="url(#ah)"/>
+<path d="M1960,1292 L1960,1360" class="edge" data-ei="99" data-a="acac" data-b="bhb" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1898.5,1276 L1773.3,1276" class="edge" data-ei="100" data-a="acac" data-b="acetone" marker-end="url(#ah)"/>
+<path d="M250,1195 L250,1260" class="edge" data-ei="101" data-a="nh3" data-b="cpu" marker-end="url(#ah)"/>
+<path d="M343,1276 L386,1276 L386,1153 L594.4,1153" class="edge" data-ei="102" data-a="cpu" data-b="citr" marker-end="url(#ah)"/>
+<path d="M501.2,1274.9 A140 140 0 0 1 592.3,1161.4" class="edge" data-ei="103" data-a="orn" data-b="citr" marker-end="url(#ah)"/>
+<path d="M687.7,1161.4 A140 140 0 0 1 778.8,1274.9" class="edge" data-ei="104" data-a="citr" data-b="as" marker-end="url(#ah)"/>
+<path d="M856.9,1199 L793.1,1277" class="edge" data-ei="105" data-a="asp_u" data-b="as" marker-end="url(#ah)"/>
+<path d="M778.8,1311.1 A140 140 0 0 1 685.6,1425.4" class="edge" data-ei="106" data-a="as" data-b="arg" marker-end="url(#ah)"/>
+<path d="M594.4,1425.4 A140 140 0 0 1 501.2,1311.1" class="edge" data-ei="107" data-a="arg" data-b="orn" marker-end="url(#ah)"/>
+<path d="M683.5,1433 L769.9,1433" class="edge" data-ei="108" data-a="arg" data-b="urea" marker-end="url(#ah)"/>
+<path d="M830.1,1433 L878.4,1433" class="edge" data-ei="109" data-a="urea" data-b="kidney" marker-end="url(#ah)"/>
+<path d="M858.9,1293 L909.2,1293" class="edge" data-ei="110" data-a="as" data-b="fum_u" marker-end="url(#ah)"/>
+<path d="M980.8,1293 L995,1293 L995,1458 L1041.0,1458" class="edge dash" data-ei="111" data-a="fum_u" data-b="fum" marker-end="url(#ah)"/>
+<path d="M370,1633.8 L370,1691.4" class="edge" data-ei="112" data-a="phe" data-b="tyr" marker-end="url(#ah)"/>
+<path d="M325.6,1707.4 L210.5,1707.4" class="edge" data-ei="113" data-a="tyr" data-b="hga" marker-end="url(#ah)"/>
+<path d="M370,1723.4 L370,1781" class="edge" data-ei="114" data-a="tyr" data-b="dopa" marker-end="url(#ah)"/>
+<path d="M411.1,1797 L578.2,1797" class="edge" data-ei="115" data-a="dopa" data-b="melanin" marker-end="url(#ah)"/>
+<path d="M370,1813 L370,1870.6" class="edge" data-ei="116" data-a="dopa" data-b="dopamine" marker-end="url(#ah)"/>
+<path d="M403.9,1886.6 L534,1886.6" class="edge" data-ei="117" data-a="dopamine" data-b="hva" marker-end="url(#ah)"/>
+<path d="M370,1902.6 L370,1960.2" class="edge" data-ei="118" data-a="dopamine" data-b="ne" marker-end="url(#ah)"/>
+<path d="M393.2,1976.2 L523.2,1976.2" class="edge" data-ei="119" data-a="ne" data-b="nmeta" marker-end="url(#ah)"/>
+<path d="M370,1992.2 L370,2049.8" class="edge" data-ei="120" data-a="ne" data-b="epi" marker-end="url(#ah)"/>
+<path d="M600,1992.2 L600,2133.8" class="edge" data-ei="121" data-a="nmeta" data-b="vma" marker-end="url(#ah)"/>
+<path d="M370,2081.8 L370,2133.8" class="edge" data-ei="122" data-a="epi" data-b="meta" marker-end="url(#ah)"/>
+<path d="M433.7,2149.8 L510.5,2149.8" class="edge" data-ei="123" data-a="meta" data-b="vma" marker-end="url(#ah)"/>
+<path d="M130,1723.4 L130,1802.3" class="edge" data-ei="124" data-a="hga" data-b="maa" marker-end="url(#ah)"/>
+<path d="M130,1834.3 L130,1913.2" class="edge" data-ei="125" data-a="maa" data-b="faa" marker-end="url(#ah)"/>
+<path d="M130,1945.2 L130,2024" class="edge" data-ei="126" data-a="faa" data-b="fumaa" marker-end="url(#ah)"/>
+<path d="M130,2056 L130,2131.3" class="edge dash" data-ei="127" data-a="fumaa" data-b="tca_aa" marker-end="url(#ah)"/>
+<path d="M764.7,1674.9 L807.6,1674.9" class="edge" data-ei="128" data-a="d_tyr" data-b="d_thy" marker-end="url(#ah)"/>
+<path d="M772.7,1746.6 L790,1746.6 L790,1715.2 L817.7,1715.2" class="edge" data-ei="129" data-a="d_trp" data-b="d_nia" marker-end="url(#ah)"/>
+<path d="M872.3,1715.2 L888.9,1715.2" class="edge" data-ei="130" data-a="d_nia" data-b="d_nad" marker-end="url(#ah)"/>
+<path d="M772.7,1746.6 L790,1746.6 L790,1778 L808.6,1778" class="edge" data-ei="131" data-a="d_trp" data-b="d_ser" marker-end="url(#ah)"/>
+<path d="M881.4,1778 L897.9,1778" class="edge" data-ei="132" data-a="d_ser" data-b="d_mel" marker-end="url(#ah)"/>
+<path d="M765.1,1840.7 L807.5,1840.7" class="edge" data-ei="133" data-a="d_his" data-b="d_hist" marker-end="url(#ah)"/>
+<path d="M761.6,1883.2 L808.1,1883.2" class="edge" data-ei="134" data-a="d_gly" data-b="d_por" marker-end="url(#ah)"/>
+<path d="M881.9,1883.2 L908.9,1883.2" class="edge" data-ei="135" data-a="d_por" data-b="d_heme" marker-end="url(#ah)"/>
+<path d="M769.1,1932.5 L790,1932.5 L790,1915.7 L818.9,1915.7" class="edge" data-ei="136" data-a="d_glu" data-b="d_gaba" marker-end="url(#ah)"/>
+<path d="M769.1,1932.5 L790,1932.5 L790,1949.3 L803.4,1949.3" class="edge" data-ei="137" data-a="d_glu" data-b="d_gsh" marker-end="url(#ah)"/>
+<path d="M763.9,2009.8 L790,2009.8 L790,1981.8 L811.7,1981.8" class="edge" data-ei="138" data-a="d_arg" data-b="d_cre" marker-end="url(#ah)"/>
+<path d="M763.9,2009.8 L821.9,2009.8" class="edge" data-ei="139" data-a="d_arg" data-b="d_urea" marker-end="url(#ah)"/>
+<path d="M763.9,2009.8 L790,2009.8 L790,2037.8 L803.7,2037.8" class="edge" data-ei="140" data-a="d_arg" data-b="d_no" marker-end="url(#ah)"/>
+<path d="M1052,2389.5 L1052,2340.9 L1090,2340.9 L1090,2260" class="edge" data-ei="141" data-a="val" data-b="aka" marker-end="url(#ah)"/>
+<path d="M1165,2389.5 L1165,2340.9 L1090,2340.9 L1090,2260" class="edge" data-ei="142" data-a="ile" data-b="aka" marker-end="url(#ah)"/>
+<path d="M1090,2228 L1090,2099.5 L1263.9,2099.5" class="edge" data-ei="143" data-a="aka" data-b="prop" marker-end="url(#ah)"/>
+<path d="M1330,2287.5 L1330,2115.5" class="edge" data-ei="144" data-a="odd" data-b="prop" marker-end="url(#ah)"/>
+<path d="M1330,2083.5 L1330,1962.5" class="edge" data-ei="145" data-a="prop" data-b="mmcoa" marker-end="url(#ah)"/>
+<path d="M1506.3,2099.5 L1396.1,2099.5" class="edge dash" data-ei="146" data-a="met" data-b="prop" marker-end="url(#ah)"/>
+<path d="M1560,2115.5 L1560,2287.5" class="edge" data-ei="147" data-a="met" data-b="sam" marker-end="url(#ah)"/>
+<path d="M1679.7,2303.5 L1744.3,2303.5" class="edge" data-ei="148" data-a="sam" data-b="sah" marker-end="url(#ah)"/>
+<path d="M1850,2287.5 L1850,2115.5" class="edge" data-ei="149" data-a="sah" data-b="hcy" marker-end="url(#ah)"/>
+<path d="M1784.8,2099.5 L1613.7,2099.5" class="edge" data-ei="150" data-a="hcy" data-b="met" marker-end="url(#ah)"/>
+<path d="M1508,1917.6 L1532.9,1917.6" class="edge" data-ei="151" data-a="thf" data-b="mthy" marker-end="url(#ah)"/>
+<path d="M1707.1,1917.6 L1786,1917.6" class="edge" data-ei="152" data-a="mthy" data-b="mthf" marker-end="url(#ah)"/>
+<path d="M1812,1933.6 L1812,1961.8 L1480,1961.8 L1480,1933.6" class="edge dash" data-ei="153" data-a="mthf" data-b="thf" marker-end="url(#ah)"/>
+<path d="M1850,1933.6 L1850,2083.5" class="edge dash" data-ei="154" data-a="mthf" data-b="hcy" marker-end="url(#ah)"/>
+<path d="M1915.2,2099.5 L1976.6,2099.5" class="edge" data-ei="155" data-a="hcy" data-b="cysta" marker-end="url(#ah)"/>
+<path d="M2103.4,2099.5 L2179.9,2099.5" class="edge" data-ei="156" data-a="cysta" data-b="cys" marker-end="url(#ah)"/>
+<path d="M1545.8,1533.5 Q1680,1593.3 1531.4,1655.9" class="edge" data-ei="157" data-a="m_aa" data-b="m_kac" marker-end="url(#ah)"/>
+<path d="M1618.1,1525.9 Q1467,1593.3 1599.8,1649.3" class="edge" data-ei="158" data-a="m_akg" data-b="m_glu" marker-end="url(#ah)"/>
+<path d="M1683.3,1648.7 Q1768,1593.3 1671,1526.2" class="edge" data-ei="159" data-a="m_glu" data-b="m_akg" marker-end="url(#ah)"/>
+<path d="M1744.8,1655.9 Q1605,1588.8 1734.7,1526.5" class="edge" data-ei="160" data-a="m_pyr" data-b="m_ala" marker-end="url(#ah)"/>
+<path d="M1775,1603.3 L1775,1655.9" class="edge" data-ei="161" data-a="m_glc" data-b="m_pyr" marker-end="url(#ah)"/>
+<path d="M1775,1684.9 L1775,1751.1" class="edge" data-ei="162" data-a="m_pyr" data-b="m_lac" marker-end="url(#ah)"/>
+<path d="M1815.3,1507.2 L1919.7,1507.2" class="edge" data-ei="163" data-a="m_ala" data-b="l_ala" marker-end="url(#ah)"/>
+<path d="M1917.3,1588.8 L1817.7,1588.8" class="edge" data-ei="164" data-a="l_glc" data-b="m_glc" marker-end="url(#ah)"/>
+<path d="M1814.9,1765.7 L1920.1,1765.7" class="edge" data-ei="165" data-a="m_lac" data-b="l_lac" marker-end="url(#ah)"/>
+<path d="M2000.3,1524.5 Q2150,1588.8 1993.8,1655.9" class="edge" data-ei="166" data-a="l_ala" data-b="l_pyr" marker-end="url(#ah)"/>
+<path d="M2094.2,1526.2 Q1975,1593.3 2079.1,1648.7" class="edge" data-ei="167" data-a="l_akg" data-b="l_glu" marker-end="url(#ah)"/>
+<path d="M1960,1751.1 L1960,1684.9" class="edge" data-ei="168" data-a="l_lac" data-b="l_pyr" marker-end="url(#ah)"/>
+<path d="M1960,1655.9 L1960,1603.3" class="edge" data-ei="169" data-a="l_pyr" data-b="l_glc" marker-end="url(#ah)"/>
+<path d="M2120,1692.2 L2120,1751.1" class="edge dash" data-ei="170" data-a="l_glu" data-b="l_urea" marker-end="url(#ah)"/>
+<path d="M2186.2,600 L2140.6,600" class="edge" data-ei="171" data-a="tg2" data-b="gf" marker-end="url(#ah)"/>
+<path d="M2047.4,600 L1961.3,600" class="edge" data-ei="172" data-a="gf" data-b="g3p2" marker-end="url(#ah)"/>
+<path d="M1870.7,600 L1860.2,600" class="edge" data-ei="173" data-a="g3p2" data-b="dhap2" marker-end="url(#ah)"/>
+<path d="M1807.8,600 L1784,600 L1784,584 L1758.3,584" class="edge" data-ei="174" data-a="dhap2" data-b="energy" marker-end="url(#ah)"/>
+<path d="M1807.8,600 L1784,600 L1784,622 L1761.5,622" class="edge" data-ei="175" data-a="dhap2" data-b="gluc2" marker-end="url(#ah)"/>
+<path d="M2094,614.0 L2094,661 L2240,661 L2240,713 L2176.1,713" class="edge dash" data-ei="176" data-a="gf" data-b="tg" marker-end="url(#ah)"/>
+<path d="M440,3128 L440,3146" class="edge" data-ei="177" data-a="l_gm2" data-b="l_gm3" marker-end="url(#ah)"/>
+<path d="M470.3,3162 L542.6,3162" class="edge" data-ei="178" data-a="l_gm3" data-b="l_gluc" marker-end="url(#ah)"/>
+<path d="M800,3128 L800,3162 L697.4,3162" class="edge" data-ei="179" data-a="l_cth" data-b="l_gluc" marker-end="url(#ah)"/>
+<path d="M620,3178 L620,3216" class="edge" data-ei="180" data-a="l_gluc" data-b="l_cer" marker-end="url(#ah)"/>
+<path d="M200,3178 L200,3216" class="edge" data-ei="181" data-a="l_sulf" data-b="l_galc" marker-end="url(#ah)"/>
+<path d="M284,3232 L572,3232" class="edge" data-ei="182" data-a="l_galc" data-b="l_cer" marker-end="url(#ah)"/>
+<path d="M953.2,3232 L668,3232" class="edge" data-ei="183" data-a="l_sm" data-b="l_cer" marker-end="url(#ah)"/>
+<path d="M130.2,2882 L376.9,2882" class="edge" data-ei="184" data-a="etoh" data-b="acald" marker-end="url(#ah)"/>
+<path d="M90,2866 L90,2822 L440,2822 L440,2866" class="edge" data-ei="185" data-a="etoh" data-b="acald" marker-end="url(#ah)"/>
+<path d="M90,2898 L90,2942 L440,2942 L440,2898" class="edge" data-ei="186" data-a="etoh" data-b="acald" marker-end="url(#ah)"/>
+<path d="M503.1,2882 L758.9,2882" class="edge" data-ei="187" data-a="acald" data-b="acet" marker-end="url(#ah)"/>
+<path d="M1144.3,2832 L1261.9,2832" class="edge" data-ei="188" data-a="e_dhap" data-b="e_g3p" marker-end="url(#ah)"/>
+<path d="M1398.1,2832 L1501.5,2832" class="edge" data-ei="189" data-a="e_g3p" data-b="e_tg" marker-end="url(#ah)"/>
+<path d="M1155.5,2892 L1252.4,2892" class="edge" data-ei="190" data-a="e_pyr" data-b="e_lac" marker-end="url(#ah)"/>
+<path d="M1165.1,2952 L1249,2952" class="edge" data-ei="191" data-a="e_acoa" data-b="e_keto" marker-end="url(#ah)"/>
+<path d="M1110,2968 L1110,3012 L1579,3012" class="edge" data-ei="192" data-a="e_acoa" data-b="e_fa" marker-end="url(#ah)"/>
+<path d="M1640,2996 L1640,2848" class="edge" data-ei="193" data-a="e_fa" data-b="e_tg" marker-end="url(#ah)"/>
+<path d="M1919.5,2922 L2054,2922" class="edge" data-ei="194" data-a="e_oaa" data-b="e_mal" marker-end="url(#ah)"/>
+<path d="M1890,2906 L1890,2848" class="edge dash" data-ei="195" data-a="e_oaa" data-b="e_glc" marker-end="url(#ah)"/>
+<path d="M213,2610 L308.4,2610" class="edge" data-ei="196" data-a="h_sg" data-b="h_ala" marker-end="url(#ah)"/>
+<path d="M491.6,2610 L577.3,2610" class="edge" data-ei="197" data-a="h_ala" data-b="h_pbg" marker-end="url(#ah)"/>
+<path d="M722.7,2610 L799.8,2610" class="edge" data-ei="198" data-a="h_pbg" data-b="h_hmb" marker-end="url(#ah)"/>
+<path d="M980.2,2610 L1047.2,2610" class="edge" data-ei="199" data-a="h_hmb" data-b="h_uro" marker-end="url(#ah)"/>
+<path d="M1222.8,2610 L1293,2610" class="edge" data-ei="200" data-a="h_uro" data-b="h_copro" marker-end="url(#ah)"/>
+<path d="M1487,2610 L1562.8,2610" class="edge" data-ei="201" data-a="h_copro" data-b="h_proto" marker-end="url(#ah)"/>
+<path d="M1717.2,2610 L1805.8,2610" class="edge" data-ei="202" data-a="h_proto" data-b="h_heme" marker-end="url(#ah)"/>
+<path d="M162.5,2221 L304.5,2221" class="edge" data-ei="203" data-a="t_ala" data-b="t_pyr" marker-end="url(#ah)"/>
+<path d="M131.9,2269 L277.6,2269" class="edge" data-ei="204" data-a="t_akg1" data-b="t_glu" marker-end="url(#ah)"/>
+<path d="M422.4,2269 L558.1,2269" class="edge" data-ei="205" data-a="t_glu" data-b="t_akg2" marker-end="url(#ah)"/>
+<path d="M379.5,2317 L519.1,2317" class="edge" data-ei="206" data-a="t_oaa" data-b="t_asp" marker-end="url(#ah)"/>
+<path d="M135.2,2381 L244.5,2381" class="edge" data-ei="207" data-a="dn_glu" data-b="dn_nh3" marker-end="url(#ah)"/>
+<path d="M355.5,2381 L439.9,2381" class="edge dash" data-ei="208" data-a="dn_nh3" data-b="dn_urea" marker-end="url(#ah)"/>
+<path d="M500.1,2381 L537.1,2381" class="edge" data-ei="209" data-a="dn_urea" data-b="dn_kid" marker-end="url(#ah)"/>
+<path d="M1057,150 L950,150 L950,128 L900.3,128" class="edge dash" data-ei="210" data-a="g6p" data-b="g6p_h" marker-end="url(#ah)"/>
+<path d="M872,112 L872,91" class="edge" data-ei="211" data-a="g6p_h" data-b="pg" marker-end="url(#ah)"/>
+<path d="M1243,150 L1331.7,150" class="edge dash" data-ei="212" data-a="g6p" data-b="g6p_g" marker-end="url(#ah)"/>
+<path d="M1508.6,150 L1388.3,150" class="edge" data-ei="213" data-a="g1p" data-b="g6p_g" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1376.4,592 L1365,592 L1365,646" class="edge" data-ei="214" data-a="f1p" data-b="dhap_f" marker-end="url(#ah)"/>
+<path d="M1330.7,662 L1305,662 L1305,420 L1289.3,420" class="edge dash" data-ei="215" data-a="dhap_f" data-b="dhap" marker-end="url(#ah)"/>
+<path d="M1150,966.0 L1150,1106 L1190,1106 L1190,1135.0" class="edge dash" data-ei="216" data-a="acoa" data-b="acoa_t" marker-end="url(#ah)"/>
+<path d="M1190,1167 L1190,1196" class="edge" data-ei="217" data-a="acoa_t" data-b="cit" marker-end="url(#ah)"/>
+<path d="M1104.5,820 L1080,820 L1080,775 L1064.5,775" class="edge" data-ei="218" data-a="pyr" data-b="oaa_g" marker-end="url(#ah)"/>
+<path d="M1035,759 L1035,730 L1057.3,730" class="edge" data-ei="219" data-a="oaa_g" data-b="pep" marker-end="url(#ah)"/>
+<path d="M1035,791 L1035,1254 L1058.5,1254" class="edge dash" data-ei="220" data-a="oaa_g" data-b="oaa" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M2059.9,1061 L1680,1061 L1680,1146 L1530,1146 L1530,1155" class="edge dash" data-ei="221" data-a="acoa_m" data-b="acoa2" marker-end="url(#ah)"/>
+<path d="M1244.9,1946.7 L1172.8,1946.9" class="edge" data-ei="222" data-a="mmcoa" data-b="scoa_o" marker-end="url(#ah)"/>
+<path d="M1110,1931 L1110,1907 L1400,1907 L1400,1490 L1292,1490 L1292,1474" class="edge dash" data-ei="223" data-a="scoa_o" data-b="scoa" marker-end="url(#ah)"/>
+<path d="M214.7,240 L264,240" class="edge join" data-a="asp_p" data-b="oro"/>
+<circle cx="264" cy="240" r="2.6" fill="#3b3b3b"/>
+<path d="M420,434 L420,345 L264,345" class="edge join" data-a="prpp_p" data-b="ump"/>
+<circle cx="264" cy="345" r="2.6" fill="#3b3b3b"/>
+<path d="M283,593 L283,576" class="edge join" data-a="mthf_p" data-b="dtmp"/>
+<circle cx="283" cy="576" r="2.6" fill="#3b3b3b"/>
+<path d="M1702.5,1002 L1745,1002" class="edge join" data-a="oaa_fa" data-b="citsyn"/>
+<circle cx="1745" cy="1002" r="2.6" fill="#3b3b3b"/>
+<path d="M227.6,864 L195.8,864 M284.4,864 L317.3,864" class="edge join" data-a="prpp_s" data-b="hgprt"/>
+<path d="M830,768 L830,786" class="edge join" data-a="prpp_a" data-b="aprt"/>
+<circle cx="830" cy="786" r="2.6" fill="#3b3b3b"/>
+<circle cx="195.8" cy="864" r="2.6" fill="#3b3b3b"/><circle cx="317.3" cy="864" r="2.6" fill="#3b3b3b"/>
+<circle class="vdot" cx="901.8" cy="1159" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle>
+<g class="node " data-id="gln"><rect x="194.9" y="50.0" width="138.3" height="40" rx="20.0"/><text x="264" y="67.0">Glutamine + CO₂</text><text x="264" y="83.0">+ 2 ATP</text></g>
+<g class="node hub" data-id="cp2"><rect x="175.0" y="176.0" width="178.0" height="24" rx="12.0"/><text x="264" y="193.0">Carbamoyl phosphate</text></g>
+<g class="node " data-id="asp_p"><rect x="125.3" y="228.0" width="89.4" height="24" rx="12.0"/><text x="170" y="245.0">Aspartate</text></g>
+<g class="node " data-id="oro"><rect x="215.7" y="278.0" width="96.7" height="24" rx="12.0"/><text x="264" y="295.0">Orotic acid</text></g>
+<g class="node hub" data-id="prpp_p"><rect x="391.6" y="434.0" width="56.8" height="24" rx="12.0"/><text x="420" y="451.0">PRPP</text></g>
+<g class="node " data-id="ump"><rect x="237.7" y="388.0" width="52.5" height="24" rx="12.0"/><text x="264" y="405.0">UMP</text></g>
+<g class="node " data-id="udp"><rect x="239.2" y="438.0" width="49.5" height="24" rx="12.0"/><text x="264" y="455.0">UDP</text></g>
+<g class="node " data-id="ctp"><rect x="325.7" y="438.0" width="48.6" height="24" rx="12.0"/><text x="350" y="455.0">CTP</text></g>
+<g class="node " data-id="dudp"><rect x="155.5" y="498.0" width="58.9" height="24" rx="12.0"/><text x="185" y="515.0">dUDP</text></g>
+<g class="node " data-id="dump"><rect x="154.0" y="564.0" width="61.9" height="24" rx="12.0"/><text x="185" y="581.0">dUMP</text></g>
+<g class="node " data-id="dtmp"><rect x="349.6" y="564.0" width="60.8" height="24" rx="12.0"/><text x="380" y="581.0">dTMP</text></g>
+<g class="node " data-id="dhf"><rect x="355.6" y="620.0" width="48.8" height="24" rx="12.0"/><text x="380" y="637.0">DHF</text></g>
+<g class="node " data-id="thf_p"><rect x="86.0" y="620.0" width="47.9" height="24" rx="12.0"/><text x="110" y="637.0">THF</text></g>
+<g class="node sm" data-id="mthf_p"><rect x="221.1" y="593.0" width="123.7" height="20" rx="10.0"/><text x="283" y="608.0">5,10-methylene-THF</text></g>
+<g class="node hub" data-id="pg"><rect x="786.7" y="63.0" width="170.7" height="24" rx="12.0"/><text x="872" y="80.0">6-Phosphogluconate</text></g>
+<g class="node " data-id="ru5p"><rect x="485.5" y="63.0" width="180.9" height="24" rx="12.0"/><text x="576" y="80.0">Ribulose-5-phosphate</text></g>
+<g class="node hub" data-id="r5p"><rect x="766.1" y="158.0" width="167.8" height="24" rx="12.0"/><text x="850" y="175.0">Ribose-5-phosphate</text></g>
+<g class="node hub" data-id="f6p_h"><rect x="939.0" y="228.0" width="46.1" height="24" rx="12.0"/><text x="962" y="245.0">F6P</text></g>
+<g class="node sm" data-id="h_nadp"><rect x="490.2" y="208.0" width="49.6" height="20" rx="10.0"/><text x="515" y="223.0">NADP⁺</text></g>
+<g class="node sm" data-id="h_nadph"><rect x="488.5" y="245.0" width="53.1" height="20" rx="10.0"/><text x="515" y="260.0"><tspan text-decoration="underline">NADPH</tspan></text></g>
+<g class="node sm" data-id="h_gssg"><rect x="628.0" y="208.0" width="44.0" height="20" rx="10.0"/><text x="650" y="223.0">GSSG</text></g>
+<g class="node sm" data-id="h_gsh"><rect x="626.6" y="245.0" width="46.7" height="20" rx="10.0"/><text x="650" y="260.0">2 GSH</text></g>
+<g class="node sm" data-id="h_h2o"><rect x="762.9" y="208.0" width="44.2" height="20" rx="10.0"/><text x="785" y="223.0">2 H₂O</text></g>
+<g class="node sm" data-id="h_h2o2"><rect x="765.6" y="245.0" width="38.8" height="20" rx="10.0"/><text x="785" y="260.0">H₂O₂</text></g>
+<g class="node hub" data-id="prpp"><rect x="821.6" y="452" width="56.8" height="24" rx="12.0"/><text x="850" y="469">PRPP</text></g>
+<g class="node " data-id="imp"><rect x="827.2" y="516" width="45.7" height="24" rx="12.0"/><text x="850" y="533">IMP</text></g>
+<g class="node " data-id="amp"><rect x="743.8" y="596" width="52.4" height="24" rx="12.0"/><text x="770" y="613">AMP</text></g>
+<g class="node " data-id="gmp"><rect x="923.6" y="596" width="52.7" height="24" rx="12.0"/><text x="950" y="613">GMP</text></g>
+<g class="node hub" data-id="prpp_h"><rect x="821.6" y="302.0" width="56.8" height="24" rx="12.0"/><text x="850" y="319.0">PRPP</text></g>
+<g class="node " data-id="gmp_s"><rect x="63.6" y="774" width="52.7" height="24" rx="12.0"/><text x="90" y="791">GMP</text></g>
+<g class="node hub" data-id="prpp_s"><rect x="227.6" y="852" width="56.8" height="24" rx="12.0"/><text x="256" y="869">PRPP</text></g>
+<g class="node " data-id="guo"><rect x="42.2" y="852" width="95.6" height="24" rx="12.0"/><text x="90" y="869">Guanosine</text></g>
+<g class="node " data-id="gua"><rect x="50.9" y="930" width="78.2" height="24" rx="12.0"/><text x="90" y="947">Guanine</text></g>
+<g class="node " data-id="imp_s"><rect x="397.2" y="774" width="45.7" height="24" rx="12.0"/><text x="420" y="791">IMP</text></g>
+<g class="node " data-id="ino"><rect x="384.7" y="852" width="70.7" height="24" rx="12.0"/><text x="420" y="869">Inosine</text></g>
+<g class="node " data-id="hyp"><rect x="360.4" y="930" width="119.1" height="24" rx="12.0"/><text x="420" y="947">Hypoxanthine</text></g>
+<g class="node " data-id="amp_s"><rect x="743.8" y="774" width="52.4" height="24" rx="12.0"/><text x="770" y="791">AMP</text></g>
+<g class="node " data-id="ado"><rect x="722.3" y="852" width="95.4" height="24" rx="12.0"/><text x="770" y="869">Adenosine</text></g>
+<g class="node " data-id="ade"><rect x="866.0" y="774" width="78.1" height="24" rx="12.0"/><text x="905" y="791">Adenine</text></g>
+<g class="node hub" data-id="xan"><rect x="378.9" y="1010" width="82.2" height="24" rx="12.0"/><text x="420" y="1027">Xanthine</text></g>
+<g class="node " data-id="uric"><rect x="543.9" y="1010" width="82.2" height="24" rx="12.0"/><text x="585" y="1027">Uric acid</text></g>
+<g class="node " data-id="allan"><rect x="724.0" y="1010" width="81.9" height="24" rx="12.0"/><text x="765" y="1027">Allantoin</text></g>
+<g class="node hub" data-id="prpp_a"><rect x="801.6" y="744" width="56.8" height="24" rx="12.0"/><text x="830" y="761">PRPP</text></g>
+<g class="node hub" data-id="glc"><rect x="1111.3" y="45.0" width="77.3" height="24" rx="12.0"/><text x="1150" y="62.0">Glucose</text></g>
+<g class="node hub" data-id="g6p"><rect x="1061.0" y="138.0" width="178.0" height="24" rx="12.0"/><text x="1150" y="155.0">Glucose-6-phosphate</text></g>
+<g class="node hub" data-id="f6p"><rect x="1058.8" y="228.0" width="182.4" height="24" rx="12.0"/><text x="1150" y="245.0">Fructose-6-phosphate</text></g>
+<g class="node " data-id="f16bp"><rect x="1042.7" y="318.0" width="214.6" height="24" rx="12.0"/><text x="1150" y="335.0">Fructose-1,6-bisphosphate</text></g>
+<g class="node " data-id="g3p"><rect x="1008.6" y="408.0" width="164.8" height="24" rx="12.0"/><text x="1091" y="425.0">Glyceraldehyde-3-P</text></g>
+<g class="node hub" data-id="dhap"><rect x="1224.7" y="408.0" width="60.6" height="24" rx="12.0"/><text x="1255" y="425.0">DHAP</text></g>
+<g class="node " data-id="bpg"><rect x="1050.5" y="488.0" width="199.0" height="24" rx="12.0"/><text x="1150" y="505.0">1,3-Bisphosphoglycerate</text></g>
+<g class="node " data-id="pg3"><rect x="1066.8" y="563.0" width="166.5" height="24" rx="12.0"/><text x="1150" y="580.0">3-Phosphoglycerate</text></g>
+<g class="node " data-id="pg2"><rect x="1066.9" y="638.0" width="166.3" height="24" rx="12.0"/><text x="1150" y="655.0">2-Phosphoglycerate</text></g>
+<g class="node " data-id="pep"><rect x="1061.3" y="718.0" width="177.4" height="24" rx="12.0"/><text x="1150" y="735.0">Phosphoenolpyruvate</text></g>
+<g class="node hub" data-id="pyr"><rect x="1108.5" y="808.0" width="83.0" height="24" rx="12.0"/><text x="1150" y="825.0">Pyruvate</text></g>
+<g class="node " data-id="lac"><rect x="1242.1" y="808.0" width="71.8" height="24" rx="12.0"/><text x="1278" y="825.0">Lactate</text></g>
+<g class="node hub" data-id="acoa"><rect x="1098.9" y="938.0" width="102.3" height="24" rx="12.0"/><text x="1150" y="955.0">Acetyl-CoA</text></g>
+<g class="node hub" data-id="gly"><rect x="1396.4" y="270" width="87.1" height="24" rx="12.0"/><text x="1440" y="287">Glycogen</text></g>
+<g class="node " data-id="udpg"><rect x="1543.2" y="270" width="113.6" height="24" rx="12.0"/><text x="1600" y="287">UDP-glucose</text></g>
+<g class="node hub" data-id="g1p"><rect x="1512.6" y="138.0" width="174.7" height="24" rx="12.0"/><text x="1600" y="155.0">Glucose-1-phosphate</text></g>
+<g class="node " data-id="gal1p"><rect x="1789.8" y="138.0" width="120.5" height="24" rx="12.0"/><text x="1850" y="155.0">Galactose-1-P</text></g>
+<g class="node hub" data-id="gal"><rect x="2004.7" y="138.0" width="90.5" height="24" rx="12.0"/><text x="2050" y="155.0">Galactose</text></g>
+<g class="node " data-id="lact"><rect x="2152.4" y="48.0" width="75.2" height="24" rx="12.0"/><text x="2190" y="65.0">Lactose</text></g>
+<g class="node " data-id="galtol"><rect x="2006.7" y="268" width="86.6" height="24" rx="12.0"/><text x="2050" y="285">Galactitol</text></g>
+<g class="node sm" data-id="lyso"><rect x="1406.2" y="310" width="67.6" height="20" rx="10.0"/><text x="1440" y="325">Lysosome</text></g>
+<g class="node sm" data-id="glc_l"><rect x="1631.5" y="310" width="56.9" height="20" rx="10.0"/><text x="1660" y="325">Glucose</text></g>
+<g class="node " data-id="suc"><rect x="1431.2" y="442" width="77.5" height="24" rx="12.0"/><text x="1470" y="459">Sucrose</text></g>
+<g class="node hub" data-id="fru"><rect x="1429.1" y="510" width="81.7" height="24" rx="12.0"/><text x="1470" y="527">Fructose</text></g>
+<g class="node " data-id="f1p"><rect x="1380.4" y="580" width="179.1" height="24" rx="12.0"/><text x="1470" y="597">Fructose-1-phosphate</text></g>
+<g class="node " data-id="glyald"><rect x="1404.1" y="650" width="131.7" height="24" rx="12.0"/><text x="1470" y="667">Glyceraldehyde</text></g>
+<g class="node " data-id="g3p_f"><rect x="1340.1" y="720" width="259.8" height="24" rx="12.0"/><text x="1470" y="737">Glyceraldehyde-3-P → glycolysis</text></g>
+<g class="node hub" data-id="f6p_f"><rect x="1343.0" y="510" width="46.1" height="24" rx="12.0"/><text x="1366" y="527">F6P</text></g>
+<g class="node " data-id="palm"><rect x="1670.2" y="701" width="149.6" height="24" rx="12.0"/><text x="1745" y="718">Palmitate (C16 FA)</text></g>
+<g class="node hub" data-id="macoa"><rect x="1688.6" y="761" width="112.8" height="24" rx="12.0"/><text x="1745" y="778">Malonyl-CoA</text></g>
+<g class="node hub" data-id="acoa_c"><rect x="1693.9" y="830" width="102.3" height="24" rx="12.0"/><text x="1745" y="847">Acetyl-CoA</text></g>
+<g class="node " data-id="cit_c"><rect x="1711.6" y="885" width="66.7" height="24" rx="12.0"/><text x="1745" y="902">Citrate</text></g>
+<g class="node sm" data-id="cshut"><rect x="1700.5" y="915" width="89.0" height="20" rx="10.0"/><text x="1745" y="930">Citrate shuttle</text></g>
+<g class="node " data-id="cit_m"><rect x="1711.6" y="953" width="66.7" height="24" rx="12.0"/><text x="1745" y="970">Citrate</text></g>
+<g class="node hub" data-id="acoa_oaa"><rect x="1693.9" y="1026" width="102.3" height="24" rx="12.0"/><text x="1745" y="1043">Acetyl-CoA</text></g>
+<g class="node " data-id="oaa_fa"><rect x="1651.5" y="990" width="51.0" height="24" rx="12.0"/><text x="1677" y="1007">OAA</text></g>
+<g class="node " data-id="tg"><rect x="2057.9" y="701" width="114.1" height="24" rx="12.0"/><text x="2115" y="718">Glycerol + FA</text></g>
+<g class="node " data-id="fa"><rect x="2046.5" y="766" width="137.1" height="24" rx="12.0"/><text x="2115" y="783">Fatty acid + CoA</text></g>
+<g class="node " data-id="acylcoa"><rect x="2052.2" y="833" width="125.6" height="24" rx="12.0"/><text x="2115" y="850">Fatty acyl-CoA</text></g>
+<g class="node sm" data-id="cpt"><rect x="2063.9" y="915" width="102.1" height="20" rx="10.0"/><text x="2115" y="930">Carnitine shuttle</text></g>
+<g class="node " data-id="acylcoa_m"><rect x="2052.2" y="978" width="125.6" height="24" rx="12.0"/><text x="2115" y="995">Fatty acyl-CoA</text></g>
+<g class="node hub" data-id="acoa_m"><rect x="2063.9" y="1049" width="102.3" height="24" rx="12.0"/><text x="2115" y="1066">Acetyl-CoA</text></g>
+<g class="node hub" data-id="oaa"><rect x="1062.5" y="1242" width="51.0" height="24" rx="12.0"/><text x="1088" y="1259">OAA</text></g>
+<g class="node " data-id="cit"><rect x="1156.6" y="1200" width="66.7" height="24" rx="12.0"/><text x="1190" y="1217">Citrate</text></g>
+<g class="node " data-id="icit"><rect x="1249.0" y="1242" width="85.9" height="24" rx="12.0"/><text x="1292" y="1259">Isocitrate</text></g>
+<g class="node hub" data-id="akg"><rect x="1306.1" y="1344" width="55.9" height="24" rx="12.0"/><text x="1334" y="1361">α-KG</text></g>
+<g class="node hub" data-id="scoa"><rect x="1233.2" y="1446" width="117.6" height="24" rx="12.0"/><text x="1292" y="1463">Succinyl-CoA</text></g>
+<g class="node " data-id="succ"><rect x="1144.9" y="1488" width="90.2" height="24" rx="12.0"/><text x="1190" y="1505">Succinate</text></g>
+<g class="node " data-id="fum"><rect x="1045.0" y="1446" width="86.1" height="24" rx="12.0"/><text x="1088" y="1463">Fumarate</text></g>
+<g class="node " data-id="mal"><rect x="1012.5" y="1344" width="67.0" height="24" rx="12.0"/><text x="1046" y="1361">Malate</text></g>
+<g class="node hub" data-id="acoa2"><rect x="1478.9" y="1159" width="102.3" height="24" rx="12.0"/><text x="1530" y="1176">Acetyl-CoA</text></g>
+<g class="node " data-id="aacoa"><rect x="1658.5" y="1159" width="142.9" height="24" rx="12.0"/><text x="1730" y="1176">Acetoacetyl-CoA</text></g>
+<g class="node hub" data-id="hmg"><rect x="1914.1" y="1159" width="91.8" height="24" rx="12.0"/><text x="1960" y="1176">HMG-CoA</text></g>
+<g class="node " data-id="mev"><rect x="2098.7" y="1159" width="102.6" height="24" rx="12.0"/><text x="2150" y="1176">Mevalonate</text></g>
+<g class="node hub" data-id="chol"><rect x="2099.4" y="1269" width="101.1" height="24" rx="12.0"/><text x="2150" y="1286">Cholesterol</text></g>
+<g class="node " data-id="acac"><rect x="1902.5" y="1264" width="114.9" height="24" rx="12.0"/><text x="1960" y="1281">Acetoacetate</text></g>
+<g class="node " data-id="bhb"><rect x="1881.7" y="1364" width="156.6" height="24" rx="12.0"/><text x="1960" y="1381">β-Hydroxybutyrate</text></g>
+<g class="node " data-id="acetone"><rect x="1690.7" y="1264" width="78.6" height="24" rx="12.0"/><text x="1730" y="1281">Acetone</text></g>
+<g class="node " data-id="nh3"><rect x="203.0" y="1167" width="94.0" height="24" rx="12.0"/><text x="250" y="1184">NH₃ + CO₂</text></g>
+<g class="node hub" data-id="cpu"><rect x="161.0" y="1264" width="178.0" height="24" rx="12.0"/><text x="250" y="1281">Carbamoyl phosphate</text></g>
+<g class="node hub" data-id="citr"><rect x="598.4" y="1141" width="83.2" height="24" rx="12.0"/><text x="640" y="1158">Citrulline</text></g>
+<g class="node " data-id="as"><rect x="705.1" y="1281" width="149.9" height="24" rx="12.0"/><text x="780" y="1298">Argininosuccinate</text></g>
+<g class="node " data-id="arg"><rect x="600.5" y="1421" width="79.0" height="24" rx="12.0"/><text x="640" y="1438">Arginine</text></g>
+<g class="node hub" data-id="orn"><rect x="457.4" y="1281" width="85.2" height="24" rx="12.0"/><text x="500" y="1298">Ornithine</text></g>
+<g class="node " data-id="asp_u"><rect x="825.3" y="1171" width="89.4" height="24" rx="12.0"/><text x="870" y="1188">Aspartate</text></g>
+<g class="node " data-id="urea"><rect x="773.9" y="1421" width="52.3" height="24" rx="12.0"/><text x="800" y="1438">Urea</text></g>
+<g class="node sm" data-id="kidney"><rect x="882.4" y="1423" width="65.1" height="20" rx="10.0"/><text x="915" y="1438">To kidney</text></g>
+<g class="node sm" data-id="fum_u"><rect x="913.2" y="1283" width="63.5" height="20" rx="10.0"/><text x="945" y="1298">Fumarate</text></g>
+<g class="node hub" data-id="phe"><rect x="310.1" y="1605.8" width="119.8" height="24" rx="12.0"/><text x="370" y="1622.8">Phenylalanine</text></g>
+<g class="node hub" data-id="tyr"><rect x="329.6" y="1695.4" width="80.8" height="24" rx="12.0"/><text x="370" y="1712.4">Tyrosine</text></g>
+<g class="node hub" data-id="dopa"><rect x="332.9" y="1785" width="74.1" height="24" rx="12.0"/><text x="370" y="1802">L-DOPA</text></g>
+<g class="node hub" data-id="dopamine"><rect x="340.1" y="1874.6" width="59.7" height="24" rx="12.0"/><text x="370" y="1891.6">DOPA</text></g>
+<g class="node hub" data-id="ne"><rect x="350.8" y="1964.2" width="38.5" height="24" rx="12.0"/><text x="370" y="1981.2">NE</text></g>
+<g class="node hub" data-id="epi"><rect x="349.5" y="2053.8" width="40.9" height="24" rx="12.0"/><text x="370" y="2070.8">EPI</text></g>
+<g class="node " data-id="meta"><rect x="310.3" y="2137.8" width="119.4" height="24" rx="12.0"/><text x="370" y="2154.8">Metanephrine</text></g>
+<g class="node " data-id="melanin"><rect x="582.2" y="1785" width="75.5" height="24" rx="12.0"/><text x="620" y="1802">Melanin</text></g>
+<g class="node " data-id="hva"><rect x="538.0" y="1874.6" width="146.0" height="24" rx="12.0"/><text x="611" y="1891.6">Homovanillic acid</text></g>
+<g class="node " data-id="nmeta"><rect x="527.2" y="1964.2" width="145.7" height="24" rx="12.0"/><text x="600" y="1981.2">Normetanephrine</text></g>
+<g class="node " data-id="vma"><rect x="514.5" y="2137.8" width="171.1" height="24" rx="12.0"/><text x="600" y="2154.8">Vanillylmandelic acid</text></g>
+<g class="node " data-id="hga"><rect x="53.5" y="1695.4" width="152.9" height="24" rx="12.0"/><text x="130" y="1712.4">Homogentisic acid</text></g>
+<g class="node " data-id="maa"><rect x="37.5" y="1806.3" width="185.0" height="24" rx="12.0"/><text x="130" y="1823.3">Maleylacetoacetic acid</text></g>
+<g class="node " data-id="faa"><rect x="44.3" y="1917.2" width="171.5" height="24" rx="12.0"/><text x="130" y="1934.2">Fumarylacetoacetate</text></g>
+<g class="node " data-id="fumaa"><rect x="30.7" y="2028" width="198.6" height="24" rx="12.0"/><text x="130" y="2045">Fumarate + acetoacetate</text></g>
+<g class="node sm" data-id="tca_aa"><rect x="96.2" y="2135.3" width="67.7" height="20" rx="10.0"/><text x="130" y="2150.3">TCA cycle</text></g>
+<g class="node sm" data-id="d_tyr"><rect x="701.3" y="1664.9" width="59.3" height="20" rx="10.0"/><text x="731" y="1679.9">Tyrosine</text></g>
+<g class="node sm" data-id="d_thy"><rect x="811.6" y="1664.9" width="66.8" height="20" rx="10.0"/><text x="845" y="1679.9">Thyroxine</text></g>
+<g class="node sm" data-id="d_trp"><rect x="693.3" y="1736.6" width="75.4" height="20" rx="10.0"/><text x="731" y="1751.6">Tryptophan</text></g>
+<g class="node sm" data-id="d_nia"><rect x="821.7" y="1705.2" width="46.6" height="20" rx="10.0"/><text x="845" y="1720.2">Niacin</text></g>
+<g class="node sm" data-id="d_nad"><rect x="892.9" y="1705.2" width="84.1" height="20" rx="10.0"/><text x="935" y="1720.2">NAD⁺/NADP⁺</text></g>
+<g class="node sm" data-id="d_ser"><rect x="812.6" y="1768" width="64.8" height="20" rx="10.0"/><text x="845" y="1783">Serotonin</text></g>
+<g class="node sm" data-id="d_mel"><rect x="901.9" y="1768" width="66.2" height="20" rx="10.0"/><text x="935" y="1783">Melatonin</text></g>
+<g class="node sm" data-id="d_his"><rect x="700.9" y="1830.7" width="60.1" height="20" rx="10.0"/><text x="731" y="1845.7">Histidine</text></g>
+<g class="node sm" data-id="d_hist"><rect x="811.5" y="1830.7" width="66.9" height="20" rx="10.0"/><text x="845" y="1845.7">Histamine</text></g>
+<g class="node sm" data-id="d_gly"><rect x="704.4" y="1873.2" width="53.2" height="20" rx="10.0"/><text x="731" y="1888.2">Glycine</text></g>
+<g class="node sm" data-id="d_por"><rect x="812.1" y="1873.2" width="65.7" height="20" rx="10.0"/><text x="845" y="1888.2">Porphyrin</text></g>
+<g class="node sm" data-id="d_heme"><rect x="912.9" y="1873.2" width="44.3" height="20" rx="10.0"/><text x="935" y="1888.2">Heme</text></g>
+<g class="node sm" data-id="d_glu"><rect x="696.9" y="1922.5" width="68.2" height="20" rx="10.0"/><text x="731" y="1937.5">Glutamate</text></g>
+<g class="node sm" data-id="d_gaba"><rect x="822.9" y="1905.7" width="44.2" height="20" rx="10.0"/><text x="845" y="1920.7">GABA</text></g>
+<g class="node sm" data-id="d_gsh"><rect x="807.4" y="1939.3" width="75.3" height="20" rx="10.0"/><text x="845" y="1954.3">Glutathione</text></g>
+<g class="node sm" data-id="d_arg"><rect x="702.1" y="1999.8" width="57.9" height="20" rx="10.0"/><text x="731" y="2014.8">Arginine</text></g>
+<g class="node sm" data-id="d_cre"><rect x="815.7" y="1971.8" width="58.5" height="20" rx="10.0"/><text x="845" y="1986.8">Creatine</text></g>
+<g class="node sm" data-id="d_urea"><rect x="825.9" y="1999.8" width="38.1" height="20" rx="10.0"/><text x="845" y="2014.8">Urea</text></g>
+<g class="node sm" data-id="d_no"><rect x="807.7" y="2027.8" width="74.6" height="20" rx="10.0"/><text x="845" y="2042.8">Nitric oxide</text></g>
+<g class="node " data-id="val"><rect x="1020.7" y="2393.5" width="62.6" height="24" rx="12.0"/><text x="1052" y="2410.5">Valine</text></g>
+<g class="node " data-id="ile"><rect x="1118.9" y="2393.5" width="92.2" height="24" rx="12.0"/><text x="1165" y="2410.5">Isoleucine</text></g>
+<g class="node " data-id="aka"><rect x="1036.6" y="2232" width="106.8" height="24" rx="12.0"/><text x="1090" y="2249">α-Ketoacids</text></g>
+<g class="node hub" data-id="prop"><rect x="1267.9" y="2087.5" width="124.2" height="24" rx="12.0"/><text x="1330" y="2104.5">Propionyl-CoA</text></g>
+<g class="node " data-id="mmcoa"><rect x="1248.9" y="1934.5" width="162.2" height="24" rx="12.0"/><text x="1330" y="1951.5">Methylmalonyl-CoA</text></g>
+<g class="node hub" data-id="odd"><rect x="1284.1" y="2291.5" width="91.9" height="24" rx="12.0"/><text x="1330" y="2308.5">Threonine</text></g>
+<g class="node sm" data-id="oddc"><rect x="1339.2" y="2218.7" width="205.7" height="20" rx="10.0"/><text x="1442" y="2233.7">Odd-chain FAs · pyrimidines · lipids</text></g>
+<g class="node hub" data-id="met"><rect x="1510.3" y="2087.5" width="99.4" height="24" rx="12.0"/><text x="1560" y="2104.5">Methionine</text></g>
+<g class="node " data-id="sam"><rect x="1444.3" y="2291.5" width="231.3" height="24" rx="12.0"/><text x="1560" y="2308.5">S-adenosylmethionine (SAM)</text></g>
+<g class="node " data-id="sah"><rect x="1748.3" y="2291.5" width="203.4" height="24" rx="12.0"/><text x="1850" y="2308.5">S-adenosylhomocysteine</text></g>
+<g class="node hub" data-id="hcy"><rect x="1788.8" y="2087.5" width="122.5" height="24" rx="12.0"/><text x="1850" y="2104.5">Homocysteine</text></g>
+<g class="node " data-id="thf"><rect x="1456.0" y="1905.6" width="47.9" height="24" rx="12.0"/><text x="1480" y="1922.6">THF</text></g>
+<g class="node " data-id="mthy"><rect x="1536.9" y="1905.6" width="166.2" height="24" rx="12.0"/><text x="1620" y="1922.6">5,10-Methylene-THF</text></g>
+<g class="node " data-id="mthf"><rect x="1790.0" y="1905.6" width="119.9" height="24" rx="12.0"/><text x="1850" y="1922.6">5-Methyl-THF</text></g>
+<g class="node " data-id="cysta"><rect x="1980.6" y="2087.5" width="118.9" height="24" rx="12.0"/><text x="2040" y="2104.5">Cystathionine</text></g>
+<g class="node " data-id="cys"><rect x="2183.9" y="2087.5" width="82.2" height="24" rx="12.0"/><text x="2225" y="2104.5">Cysteine</text></g>
+<g class="node " data-id="m_aa"><rect x="1443.3" y="1491.7" width="107.3" height="40" rx="20.0"/><text x="1497" y="1508.7">Amino acids</text><text x="1497" y="1524.7">(NH₃)</text></g>
+<g class="node " data-id="m_kac"><rect x="1443.6" y="1658.4" width="106.8" height="24" rx="12.0"/><text x="1497" y="1675.4">α-Ketoacids</text></g>
+<g class="node " data-id="m_akg"><rect x="1622.1" y="1499.7" width="55.9" height="24" rx="12.0"/><text x="1650" y="1516.7">α-KG</text></g>
+<g class="node hub" data-id="m_glu"><rect x="1603.8" y="1650.4" width="92.5" height="40" rx="20.0"/><text x="1650" y="1667.4">Glutamate</text><text x="1650" y="1683.4">(NH₃)</text></g>
+<g class="node hub" data-id="m_ala"><rect x="1738.7" y="1487.2" width="72.6" height="40" rx="20.0"/><text x="1775" y="1504.2">Alanine</text><text x="1775" y="1520.2">(NH₃)</text></g>
+<g class="node " data-id="m_glc"><rect x="1736.3" y="1576.8" width="77.3" height="24" rx="12.0"/><text x="1775" y="1593.8">Glucose</text></g>
+<g class="node " data-id="m_pyr"><rect x="1733.5" y="1658.4" width="83.0" height="24" rx="12.0"/><text x="1775" y="1675.4">Pyruvate</text></g>
+<g class="node " data-id="m_lac"><rect x="1739.1" y="1753.7" width="71.8" height="24" rx="12.0"/><text x="1775" y="1770.7">Lactate</text></g>
+<g class="node hub" data-id="l_ala"><rect x="1923.7" y="1487.2" width="72.6" height="40" rx="20.0"/><text x="1960" y="1504.2">Alanine</text><text x="1960" y="1520.2">(NH₃)</text></g>
+<g class="node " data-id="l_glc"><rect x="1921.3" y="1576.8" width="77.3" height="24" rx="12.0"/><text x="1960" y="1593.8">Glucose</text></g>
+<g class="node " data-id="l_pyr"><rect x="1918.5" y="1658.4" width="83.0" height="24" rx="12.0"/><text x="1960" y="1675.4">Pyruvate</text></g>
+<g class="node " data-id="l_lac"><rect x="1924.1" y="1753.7" width="71.8" height="24" rx="12.0"/><text x="1960" y="1770.7">Lactate</text></g>
+<g class="node " data-id="l_akg"><rect x="2092.1" y="1499.7" width="55.9" height="24" rx="12.0"/><text x="2120" y="1516.7">α-KG</text></g>
+<g class="node hub" data-id="l_glu"><rect x="2073.8" y="1650.4" width="92.5" height="40" rx="20.0"/><text x="2120" y="1667.4">Glutamate</text><text x="2120" y="1683.4">(NH₃)</text></g>
+<g class="node " data-id="l_urea"><rect x="2071.6" y="1753.7" width="96.8" height="24" rx="12.0"/><text x="2120" y="1770.7">Urea (NH₃)</text></g>
+<g class="node sm hub" data-id="tg2"><rect x="2190.2" y="590" width="77.6" height="20" rx="10.0"/><text x="2229" y="605">Triglyceride</text></g>
+<g class="node sm" data-id="gf"><rect x="2051.4" y="590" width="85.1" height="20" rx="10.0"/><text x="2094" y="605">Glycerol + FA</text></g>
+<g class="node sm" data-id="g3p2"><rect x="1874.7" y="590" width="82.6" height="20" rx="10.0"/><text x="1916" y="605">Glycerol-3-P</text></g>
+<g class="node sm" data-id="dhap2"><rect x="1811.8" y="590" width="44.4" height="20" rx="10.0"/><text x="1834" y="605">DHAP</text></g>
+<g class="node sm" data-id="energy"><rect x="1703.7" y="574" width="50.6" height="20" rx="10.0"/><text x="1729" y="589">Energy</text></g>
+<g class="node sm" data-id="gluc2"><rect x="1700.5" y="612" width="56.9" height="20" rx="10.0"/><text x="1729" y="627">Glucose</text></g>
+<g class="node " data-id="l_gm2"><rect x="413.8" y="3100" width="52.4" height="24" rx="12.0"/><text x="440" y="3117">GM2</text></g>
+<g class="node " data-id="l_gm3"><rect x="413.7" y="3150" width="52.6" height="24" rx="12.0"/><text x="440" y="3167">GM3</text></g>
+<g class="node " data-id="l_cth"><rect x="713.7" y="3100" width="172.6" height="24" rx="12.0"/><text x="800" y="3117">Ceramide trihexoside</text></g>
+<g class="node " data-id="l_gluc"><rect x="546.6" y="3150" width="146.8" height="24" rx="12.0"/><text x="620" y="3167">Glucocerebroside</text></g>
+<g class="node hub" data-id="l_cer"><rect x="576.0" y="3220" width="88.0" height="24" rx="12.0"/><text x="620" y="3237">Ceramide</text></g>
+<g class="node " data-id="l_sulf"><rect x="154.6" y="3150" width="90.7" height="24" rx="12.0"/><text x="200" y="3167">Sulfatides</text></g>
+<g class="node " data-id="l_galc"><rect x="120.0" y="3220" width="160.0" height="24" rx="12.0"/><text x="200" y="3237">Galactocerebroside</text></g>
+<g class="node " data-id="l_sm"><rect x="957.2" y="3220" width="125.6" height="24" rx="12.0"/><text x="1020" y="3237">Sphingomyelin</text></g>
+<g class="node hub" data-id="etoh"><rect x="53.8" y="2870" width="72.4" height="24" rx="12.0"/><text x="90" y="2887">Ethanol</text></g>
+<g class="node hub" data-id="acald"><rect x="380.9" y="2870" width="118.1" height="24" rx="12.0"/><text x="440" y="2887">Acetaldehyde</text></g>
+<g class="node hub" data-id="acet"><rect x="762.9" y="2870" width="74.3" height="24" rx="12.0"/><text x="800" y="2887">Acetate</text></g>
+<g class="node " data-id="e_dhap"><rect x="1079.7" y="2820" width="60.6" height="24" rx="12.0"/><text x="1110" y="2837">DHAP</text></g>
+<g class="node " data-id="e_g3p"><rect x="1265.9" y="2820" width="128.2" height="24" rx="12.0"/><text x="1330" y="2837">↑ Glycerol-3-P</text></g>
+<g class="node " data-id="e_tg"><rect x="1505.5" y="2820" width="268.9" height="24" rx="12.0"/><text x="1640" y="2837">↑ Triglycerides (hepatic steatosis)</text></g>
+<g class="node " data-id="e_pyr"><rect x="1068.5" y="2880" width="83.0" height="24" rx="12.0"/><text x="1110" y="2897">Pyruvate</text></g>
+<g class="node " data-id="e_lac"><rect x="1256.4" y="2880" width="207.2" height="24" rx="12.0"/><text x="1360" y="2897">↑ Lactate (lactic acidosis)</text></g>
+<g class="node " data-id="e_acoa"><rect x="1058.9" y="2940" width="102.3" height="24" rx="12.0"/><text x="1110" y="2957">Acetyl-CoA</text></g>
+<g class="node " data-id="e_keto"><rect x="1253.0" y="2940" width="214.0" height="24" rx="12.0"/><text x="1360" y="2957">↑ Ketoacids (ketoacidosis)</text></g>
+<g class="node " data-id="e_fa"><rect x="1583.0" y="3000" width="114.1" height="24" rx="12.0"/><text x="1640" y="3017">↑ Fatty acids</text></g>
+<g class="node " data-id="e_glc"><rect x="1851.3" y="2820" width="77.3" height="24" rx="12.0"/><text x="1890" y="2837">Glucose</text></g>
+<g class="node " data-id="e_oaa"><rect x="1864.5" y="2910" width="51.0" height="24" rx="12.0"/><text x="1890" y="2927">OAA</text></g>
+<g class="node " data-id="e_mal"><rect x="2058.0" y="2910" width="84.0" height="24" rx="12.0"/><text x="2100" y="2927">↑ Malate</text></g>
+<g class="node " data-id="h_sg"><rect x="21.0" y="2598" width="188.0" height="24" rx="12.0"/><text x="115" y="2615">Succinyl-CoA + glycine</text></g>
+<g class="node " data-id="h_ala"><rect x="312.4" y="2598" width="175.2" height="24" rx="12.0"/><text x="400" y="2615">δ-Aminolevulinic acid</text></g>
+<g class="node " data-id="h_pbg"><rect x="581.3" y="2598" width="137.4" height="24" rx="12.0"/><text x="650" y="2615">Porphobilinogen</text></g>
+<g class="node " data-id="h_hmb"><rect x="803.8" y="2598" width="172.3" height="24" rx="12.0"/><text x="890" y="2615">Hydroxymethylbilane</text></g>
+<g class="node " data-id="h_uro"><rect x="1051.2" y="2598" width="167.5" height="24" rx="12.0"/><text x="1135" y="2615">Uroporphyrinogen III</text></g>
+<g class="node " data-id="h_copro"><rect x="1297.0" y="2598" width="186.0" height="24" rx="12.0"/><text x="1390" y="2615">Coproporphyrinogen III</text></g>
+<g class="node " data-id="h_proto"><rect x="1566.8" y="2598" width="146.4" height="24" rx="12.0"/><text x="1640" y="2615">Protoporphyrin IX</text></g>
+<g class="node hub" data-id="h_heme"><rect x="1809.8" y="2598" width="60.4" height="24" rx="12.0"/><text x="1840" y="2615">Heme</text></g>
+<g class="node " data-id="t_ala"><rect x="41.5" y="2209" width="117.0" height="24" rx="12.0"/><text x="100" y="2226">Alanine (NH₂)</text></g>
+<g class="node " data-id="t_pyr"><rect x="308.5" y="2209" width="83.0" height="24" rx="12.0"/><text x="350" y="2226">Pyruvate</text></g>
+<g class="node " data-id="t_akg1"><rect x="72.1" y="2257" width="55.9" height="24" rx="12.0"/><text x="100" y="2274">α-KG</text></g>
+<g class="node hub" data-id="t_glu"><rect x="281.6" y="2257" width="136.8" height="24" rx="12.0"/><text x="350" y="2274">Glutamate (NH₂)</text></g>
+<g class="node " data-id="t_akg2"><rect x="562.1" y="2257" width="55.9" height="24" rx="12.0"/><text x="590" y="2274">α-KG</text></g>
+<g class="node " data-id="t_oaa"><rect x="324.5" y="2305" width="51.0" height="24" rx="12.0"/><text x="350" y="2322">OAA</text></g>
+<g class="node " data-id="t_asp"><rect x="523.1" y="2305" width="133.7" height="24" rx="12.0"/><text x="590" y="2322">Aspartate (NH₂)</text></g>
+<g class="node hub" data-id="dn_glu"><rect x="38.8" y="2369" width="92.5" height="24" rx="12.0"/><text x="85" y="2386">Glutamate</text></g>
+<g class="node " data-id="dn_nh3"><rect x="248.5" y="2369" width="103.1" height="24" rx="12.0"/><text x="300" y="2386">NH₃ + α-KG</text></g>
+<g class="node hub" data-id="dn_urea"><rect x="443.9" y="2369" width="52.3" height="24" rx="12.0"/><text x="470" y="2386">Urea</text></g>
+<g class="node " data-id="dn_kid"><rect x="541.1" y="2369" width="127.7" height="24" rx="12.0"/><text x="605" y="2386">Kidney → urine</text></g>
+<g class="node hub" data-id="g6p_h"><rect x="847.7" y="116.0" width="48.5" height="24" rx="12.0"/><text x="872" y="133.0">G6P</text></g>
+<g class="node hub" data-id="g6p_g"><rect x="1335.7" y="138.0" width="48.5" height="24" rx="12.0"/><text x="1360" y="155.0">G6P</text></g>
+<g class="node hub" data-id="dhap_f"><rect x="1334.7" y="650" width="60.6" height="24" rx="12.0"/><text x="1365" y="667">DHAP</text></g>
+<g class="node hub" data-id="acoa_t"><rect x="1138.9" y="1139" width="102.3" height="24" rx="12.0"/><text x="1190" y="1156">Acetyl-CoA</text></g>
+<g class="node hub" data-id="oaa_g"><rect x="1009.5" y="763.0" width="51.0" height="24" rx="12.0"/><text x="1035" y="780.0">OAA</text></g>
+<g class="node hub" data-id="scoa_o"><rect x="1051.2" y="1935" width="117.6" height="24" rx="12.0"/><text x="1110" y="1952">Succinyl-CoA</text></g>
+<g class="enz" data-k="gln&gt;cp2&gt;CPS II ★" data-ei="0" data-dz="" data-vit=""><rect class="lbg" x="272.0" y="118.0" width="56.2" height="17.5" rx="3"/><text x="274.0" y="128.0" class="et">CPS II ★</text></g>
+<g class="enz" data-k="cp2&gt;oro&gt;Dihydroorotate DH" data-ei="1" data-dz="" data-vit=""><rect class="lbg" x="272.0" y="223.0" width="115.5" height="33.0" rx="3"/><text x="274.0" y="233.0" class="et">Dihydroorotate DH</text><text x="274.0" y="248.5" class="et">(⊖ leflunomide)</text></g>
+<g class="enz" data-k="oro&gt;ump&gt;UMP synthase" data-ei="2" data-dz="1" data-vit=""><rect class="lbg" x="155.5" y="328.0" width="102.5" height="33.0" rx="3"/><text x="157.5" y="338.0" class="et">UMP synthase</text><g class="badge" data-d="1"><rect x="157.5" y="342.5" width="18" height="15" rx="2"/><text x="166.5" y="354.5">1</text></g><text x="177.5" y="354.5" class="dzname">Orotic aciduria</text></g>
+<g class="enz" data-k="udp&gt;dudp&gt;Ribonucleotide reductase" data-ei="5" data-dz="" data-vit=""><rect class="lbg" x="220.0" y="472.0" width="157.7" height="33.0" rx="3"/><text x="222.0" y="482.0" class="et">Ribonucleotide reductase</text><text x="222.0" y="497.5" class="et">(⊖ hydroxyurea)</text></g>
+<g class="enz" data-k="dump&gt;dtmp&gt;Thymidylate synthase" data-ei="7" data-dz="" data-vit=""><rect class="lbg" x="220.0" y="537.0" width="136.5" height="33.0" rx="3"/><text x="222.0" y="547.0" class="et">Thymidylate synthase</text><text x="222.0" y="562.5" class="et">(⊖ 5-FU)</text></g>
+<g class="enz" data-k="dhf&gt;thf_p&gt;DHF reductase" data-ei="8" data-dz="" data-vit="B9"><rect class="lbg" x="190.2" y="643.0" width="109.6" height="17.5" rx="3"/><text x="192.2" y="653.0" class="et">DHF reductase</text><circle class="vdot" cx="289.8" cy="648.8" r="5" fill="#3aa6dd"><title>Folate (B9)</title></circle></g>
+<g class="enz" data-k="ru5p&gt;r5p&gt;Phosphopentose" data-ei="12" data-dz="" data-vit=""><rect class="lbg" x="582.0" y="137.0" width="105.8" height="33.0" rx="3"/><text x="584.0" y="147.0" class="et">Phosphopentose</text><text x="584.0" y="162.5" class="et">isomerase</text></g>
+<g class="enz" data-k="r5p&gt;f6p_h&gt;Transketolase" data-ei="13" data-dz="" data-vit="B1"><rect class="lbg" x="851.7" y="190.0" width="104.3" height="33.0" rx="3"/><text x="853.7" y="200.0" class="et">Transketolase</text><text x="853.7" y="215.5" class="et">(+ G3P)</text><circle class="vdot" cx="946.0" cy="195.8" r="5" fill="#e8692c"><title>Thiamine (B1)</title></circle></g>
+<g class="enz" data-k="r5p&gt;prpp_h&gt;PRPP" data-ei="20" data-dz="" data-vit=""><rect class="lbg" x="856.0" y="252.0" width="70.6" height="33.0" rx="3"/><text x="858.0" y="262.0" class="et">PRPP</text><text x="858.0" y="277.5" class="et">synthetase</text></g>
+<g class="enz" data-k="prpp&gt;imp&gt;PRPP amidotransferase ★" data-ei="22" data-dz="" data-vit=""><rect class="lbg" x="682.2" y="482" width="161.8" height="48.5" rx="3"/><text x="684.2" y="492" class="et">PRPP amidotransferase ★</text><text x="684.2" y="507.5" class="et">(+ glutamine;</text><text x="684.2" y="523" class="et">⊖ AMP/GMP, 6-MP)</text></g>
+<g class="enz" data-k="imp&gt;gmp&gt;IMP DH (⊖" data-ei="24" data-dz="" data-vit=""><rect class="lbg" x="882.0" y="519" width="101.2" height="33.0" rx="3"/><text x="884.0" y="529" class="et">IMP DH (⊖</text><text x="884.0" y="544.5" class="et">mycophenolate)</text></g>
+<g class="enz" data-k="prpp&gt;prpp_p&gt;to pyrimidine synthesis" data-ei="25" data-dz="" data-vit=""><rect class="lbg" x="662.0" y="447" width="143.4" height="17.5" rx="3"/><text x="664.0" y="457" class="et">to pyrimidine synthesis</text></g>
+<g class="enz" data-k="amp&gt;amp_s&gt;to salvage &amp;" data-ei="26" data-dz="" data-vit=""><rect class="lbg" x="778.0" y="653" width="77.5" height="33.0" rx="3"/><text x="780.0" y="663" class="et">to salvage &amp;</text><text x="780.0" y="678.5" class="et">breakdown</text></g>
+<g class="enz" data-k="gua&gt;gmp_s&gt;HGPRT" data-ei="30" data-dz="3" data-vit=""><rect class="lbg" x="207.8" y="890" width="96.5" height="33.0" rx="3"/><text x="209.8" y="900" class="et">HGPRT</text><g class="badge" data-d="3"><rect x="209.8" y="904.5" width="18" height="15" rx="2"/><text x="218.8" y="916.5">3</text></g><text x="229.8" y="916.5" class="dzname">Lesch-Nyhan</text></g>
+<g class="enz" data-k="amp_s&gt;imp_s&gt;AMP deaminase" data-ei="34" data-dz="" data-vit=""><rect class="lbg" x="544.2" y="768" width="101.6" height="17.5" rx="3"/><text x="546.2" y="778" class="et">AMP deaminase</text></g>
+<g class="enz" data-k="ado&gt;ino&gt;Adenosine deaminase" data-ei="36" data-dz="4" data-vit=""><rect class="lbg" x="528.4" y="829" width="137.3" height="33.0" rx="3"/><text x="530.4" y="839" class="et">Adenosine deaminase</text><g class="badge" data-d="4"><rect x="530.4" y="843.5" width="18" height="15" rx="2"/><text x="539.4" y="855.5">4</text></g><text x="550.4" y="855.5" class="dzname">SCID</text></g>
+<g class="enz" data-k="ade&gt;amp_s&gt;APRT" data-ei="37" data-dz="" data-vit=""><rect class="lbg" x="864.0" y="750" width="37.4" height="17.5" rx="3"/><text x="866.0" y="760" class="et">APRT</text></g>
+<g class="enz" data-k="gua&gt;xan&gt;Guanine deaminase" data-ei="39" data-dz="" data-vit=""><rect class="lbg" x="108.0" y="1003" width="123.0" height="17.5" rx="3"/><text x="110.0" y="1013" class="et">Guanine deaminase</text></g>
+<g class="enz" data-k="hyp&gt;xan&gt;XO (⊖ allopurinol, febuxostat)" data-ei="40" data-dz="" data-vit=""><rect class="lbg" x="428.0" y="976" width="189.8" height="17.5" rx="3"/><text x="430.0" y="986" class="et">XO (⊖ allopurinol, febuxostat)</text></g>
+<g class="enz" data-k="xan&gt;uric&gt;XO" data-ei="41" data-dz="" data-vit=""><rect class="lbg" x="492.0" y="1034" width="22.0" height="17.5" rx="3"/><text x="494.0" y="1044" class="et">XO</text></g>
+<g class="enz" data-k="uric&gt;allan&gt;Urate oxidase" data-ei="42" data-dz="" data-vit=""><rect class="lbg" x="632.6" y="988" width="86.9" height="33.0" rx="3"/><text x="634.6" y="998" class="et">Urate oxidase</text><text x="634.6" y="1013.5" class="et">(rasburicase)</text></g>
+<g class="enz" data-k="glc&gt;g6p&gt;Hexokinase /" data-ei="43" data-dz="9" data-vit=""><rect class="lbg" x="1168.0" y="81.0" width="146.0" height="48.5" rx="3"/><text x="1170.0" y="91.0" class="et">Hexokinase /</text><text x="1170.0" y="106.5" class="et">glucokinase (ATP)</text><g class="badge" data-d="9"><rect x="1170.0" y="111.0" width="18" height="15" rx="2"/><text x="1179.0" y="123.0">9</text></g><text x="1190.0" y="123.0" class="dzname">MODY / gestational DM</text></g>
+<g class="enz" data-k="g6p&gt;glc&gt;Glucose-6-" data-ei="44" data-dz="10" data-vit=""><rect class="lbg" x="1051.7" y="84.8" width="83.6" height="48.5" rx="3"/><text x="1053.7" y="94.8" class="et">Glucose-6-</text><text x="1053.7" y="110.3" class="et">phosphatase</text><g class="badge" data-d="10"><rect x="1053.7" y="114.8" width="18" height="15" rx="2"/><text x="1062.7" y="126.8">10</text></g><text x="1073.7" y="126.8" class="dzname">Von Gierke</text></g>
+<g class="enz" data-k="g6p&gt;f6p&gt;Phosphoglucose" data-ei="45" data-dz="" data-vit=""><rect class="lbg" x="1156.0" y="185.0" width="104.7" height="33.0" rx="3"/><text x="1158.0" y="195.0" class="et">Phosphoglucose</text><text x="1158.0" y="210.5" class="et">isomerase</text></g>
+<g class="enz" data-k="f6p&gt;f16bp&gt;PFK-1 ★ (ATP)" data-ei="46" data-dz="" data-vit=""><rect class="lbg" x="1168.0" y="275.0" width="91.3" height="17.5" rx="3"/><text x="1170.0" y="285.0" class="et">PFK-1 ★ (ATP)</text></g>
+<g class="enz" data-k="f16bp&gt;f6p&gt;F-1,6-BPase ★" data-ei="47" data-dz="" data-vit=""><rect class="lbg" x="1038.1" y="275.0" width="93.9" height="17.5" rx="3"/><text x="1040.1" y="285.0" class="et">F-1,6-BPase ★</text></g>
+<g class="enz" data-k="f16bp&gt;g3p&gt;Aldolase A/B" data-ei="48" data-dz="" data-vit=""><rect class="lbg" x="1060.5" y="356.0" width="81.5" height="17.5" rx="3"/><text x="1062.5" y="366.0" class="et">Aldolase A/B</text></g>
+<g class="enz" data-k="g3p&gt;dhap&gt;TPI" data-ei="50" data-dz="" data-vit=""><rect class="lbg" x="1186.1" y="400.0" width="23.7" height="17.5" rx="3"/><text x="1188.1" y="410.0" class="et">TPI</text></g>
+<g class="enz" data-k="g3p&gt;bpg&gt;G3P DH" data-ei="51" data-dz="" data-vit="B3"><rect class="lbg" x="1156.0" y="452.0" width="95.4" height="33.0" rx="3"/><text x="1158.0" y="462.0" class="et">G3P DH</text><text x="1158.0" y="477.5" class="et">(NAD⁺→NADH)</text><circle class="vdot" cx="1213.2" cy="457.8" r="5" fill="#f2a93b"><title>Niacin (B3)</title></circle></g>
+<g class="enz" data-k="bpg&gt;pg3&gt;Phosphoglycerate" data-ei="52" data-dz="" data-vit=""><rect class="lbg" x="1156.0" y="521.0" width="113.3" height="33.0" rx="3"/><text x="1158.0" y="531.0" class="et">Phosphoglycerate</text><text x="1158.0" y="546.5" class="et">kinase (ATP)</text></g>
+<g class="enz" data-k="pg3&gt;pg2&gt;Phosphoglycerate" data-ei="53" data-dz="" data-vit=""><rect class="lbg" x="1156.0" y="596.0" width="113.3" height="33.0" rx="3"/><text x="1158.0" y="606.0" class="et">Phosphoglycerate</text><text x="1158.0" y="621.5" class="et">mutase</text></g>
+<g class="enz" data-k="pg2&gt;pep&gt;Enolase (Mg²⁺)" data-ei="54" data-dz="" data-vit=""><rect class="lbg" x="1156.0" y="675.0" width="94.5" height="33.0" rx="3"/><text x="1158.0" y="685.0" class="et">Enolase (Mg²⁺)</text><text x="1158.0" y="700.5" class="et">(⊖ fluoride)</text></g>
+<g class="enz" data-k="pep&gt;pyr&gt;Pyruvate kinase ★" data-ei="55" data-dz="11" data-vit=""><rect class="lbg" x="1156.0" y="748.0" width="116.7" height="48.5" rx="3"/><text x="1158.0" y="758.0" class="et">Pyruvate kinase ★</text><text x="1158.0" y="773.5" class="et">(ATP)</text><g class="badge" data-d="11"><rect x="1158.0" y="778.0" width="18" height="15" rx="2"/><text x="1167.0" y="790.0">11</text></g><text x="1178.0" y="790.0" class="dzname">PK deficiency</text></g>
+<g class="enz" data-k="pyr&gt;lac&gt;LDH" data-ei="56" data-dz="" data-vit="B3"><rect class="lbg" x="1197.2" y="802.0" width="45.6" height="17.5" rx="3"/><text x="1199.2" y="812.0" class="et">LDH</text><circle class="vdot" cx="1232.8" cy="807.8" r="5" fill="#f2a93b"><title>Niacin (B3)</title></circle></g>
+<g class="enz" data-k="pyr&gt;acoa&gt;Pyruvate DH" data-ei="57" data-dz="12" data-vit="B1 B2 B3 B5"><rect class="lbg" x="1156.0" y="848.0" width="154.1" height="48.5" rx="3"/><text x="1158.0" y="858.0" class="et">Pyruvate DH</text><text x="1158.0" y="873.5" class="et">(⊖ arsenite)</text><g class="badge" data-d="12"><rect x="1158.0" y="878.0" width="18" height="15" rx="2"/><text x="1167.0" y="890.0">12</text></g><text x="1178.0" y="890.0" class="dzname">PDH deficiency</text><circle class="vdot" cx="1264.1" cy="885.8" r="5" fill="#e8692c"><title>Thiamine (B1)</title></circle><circle class="vdot" cx="1276.1" cy="885.8" r="5" fill="#4e8d8a"><title>Riboflavin (B2)</title></circle><circle class="vdot" cx="1288.1" cy="885.8" r="5" fill="#f2a93b"><title>Niacin (B3)</title></circle><circle class="vdot" cx="1300.1" cy="885.8" r="5" fill="#6b4ea0"><title>Pantothenic acid (B5)</title></circle></g>
+<g class="enz" data-k="gly&gt;g1p&gt;Myophosphorylase ★" data-ei="60" data-dz="23" data-vit="B6"><rect class="lbg" x="1352.0" y="170" width="136.4" height="64.0" rx="3"/><text x="1354.0" y="180" class="et">Myophosphorylase ★</text><text x="1354.0" y="195.5" class="et">(muscle glycogen</text><text x="1354.0" y="211" class="et">phosphorylase)</text><g class="badge" data-d="23"><rect x="1354.0" y="215.5" width="18" height="15" rx="2"/><text x="1363.0" y="227.5">23</text></g><text x="1374.0" y="227.5" class="dzname">McArdle</text><circle class="vdot" cx="1424.5" cy="223.3" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="lyso&gt;glc_l&gt;Acid maltase (α-1,4-glucosidase)" data-ei="62" data-dz="22" data-vit=""><rect class="lbg" x="1448.1" y="336" width="203.8" height="33.0" rx="3"/><text x="1450.1" y="346" class="et">Acid maltase (α-1,4-glucosidase)</text><g class="badge" data-d="22"><rect x="1450.1" y="350.5" width="18" height="15" rx="2"/><text x="1459.1" y="362.5">22</text></g><text x="1470.1" y="362.5" class="dzname">Pompe</text></g>
+<g class="enz" data-k="lact&gt;gal&gt;Lactase (+ glucose)" data-ei="63" data-dz="13" data-vit=""><rect class="lbg" x="2054.1" y="102.6" width="127.7" height="33.0" rx="3"/><text x="2056.1" y="112.6" class="et">Lactase (+ glucose)</text><g class="badge" data-d="13"><rect x="2056.1" y="117.1" width="18" height="15" rx="2"/><text x="2065.1" y="129.1">13</text></g><text x="2076.1" y="129.1" class="dzname">Lactose intolerance</text></g>
+<g class="enz" data-k="gal&gt;gal1p&gt;Galactokinase (ATP)" data-ei="64" data-dz="14" data-vit=""><rect class="lbg" x="1887.1" y="104.0" width="125.9" height="33.0" rx="3"/><text x="1889.1" y="114.0" class="et">Galactokinase (ATP)</text><g class="badge" data-d="14"><rect x="1889.1" y="118.5" width="18" height="15" rx="2"/><text x="1898.1" y="130.5">14</text></g><text x="1909.1" y="130.5" class="dzname">Galactokinase def.</text></g>
+<g class="enz" data-k="gal1p&gt;g1p&gt;Gal-1-P uridyltransferase" data-ei="65" data-dz="15" data-vit=""><rect class="lbg" x="1647.5" y="104.0" width="155.0" height="33.0" rx="3"/><text x="1649.5" y="114.0" class="et">Gal-1-P uridyltransferase</text><g class="badge" data-d="15"><rect x="1649.5" y="118.5" width="18" height="15" rx="2"/><text x="1658.5" y="130.5">15</text></g><text x="1669.5" y="130.5" class="dzname">Classic galactosemia</text></g>
+<g class="enz" data-k="gal&gt;galtol&gt;Aldose reductase" data-ei="66" data-dz="" data-vit=""><rect class="lbg" x="1934.6" y="222" width="109.4" height="33.0" rx="3"/><text x="1936.6" y="232" class="et">Aldose reductase</text><text x="1936.6" y="247.5" class="et">→ cataracts</text></g>
+<g class="enz" data-k="suc&gt;fru&gt;Sucrase (+ glucose)" data-ei="67" data-dz="" data-vit=""><rect class="lbg" x="1476.0" y="482" width="125.1" height="17.5" rx="3"/><text x="1478.0" y="492" class="et">Sucrase (+ glucose)</text></g>
+<g class="enz" data-k="fru&gt;f1p&gt;Fructokinase" data-ei="68" data-dz="16" data-vit=""><rect class="lbg" x="1476.0" y="541" width="107.7" height="33.0" rx="3"/><text x="1478.0" y="551" class="et">Fructokinase</text><g class="badge" data-d="16"><rect x="1478.0" y="555.5" width="18" height="15" rx="2"/><text x="1487.0" y="567.5">16</text></g><text x="1498.0" y="567.5" class="dzname">Ess. fructosuria</text></g>
+<g class="enz" data-k="f1p&gt;glyald&gt;Aldolase B" data-ei="69" data-dz="17" data-vit=""><rect class="lbg" x="1476.0" y="611" width="100.5" height="33.0" rx="3"/><text x="1478.0" y="621" class="et">Aldolase B</text><g class="badge" data-d="17"><rect x="1478.0" y="625.5" width="18" height="15" rx="2"/><text x="1487.0" y="637.5">17</text></g><text x="1498.0" y="637.5" class="dzname">Fructose intol.</text></g>
+<g class="enz" data-k="fru&gt;f6p_f&gt;Hexokinase" data-ei="70" data-dz="" data-vit=""><rect class="lbg" x="1336.0" y="459" width="97.7" height="33.0" rx="3"/><text x="1338.0" y="469" class="et">Hexokinase</text><text x="1338.0" y="484.5" class="et">(OUTSIDE liver)</text></g>
+<g class="enz" data-k="glyald&gt;g3p_f&gt;Triose kinase" data-ei="72" data-dz="" data-vit=""><rect class="lbg" x="1476.0" y="691" width="84.0" height="17.5" rx="3"/><text x="1478.0" y="701" class="et">Triose kinase</text></g>
+<g class="enz" data-k="macoa&gt;palm&gt;Fatty acid synthase (NADPH)" data-ei="73" data-dz="" data-vit=""><rect class="lbg" x="1751.0" y="737" width="178.6" height="17.5" rx="3"/><text x="1753.0" y="747" class="et">Fatty acid synthase (NADPH)</text></g>
+<g class="enz" data-k="acoa_c&gt;macoa&gt;Acetyl-CoA carboxylase ★" data-ei="74" data-dz="" data-vit="B7"><rect class="lbg" x="1751.0" y="794" width="183.2" height="33.0" rx="3"/><text x="1753.0" y="804" class="et">Acetyl-CoA carboxylase ★</text><text x="1753.0" y="819.5" class="et">(insulin ⊕, glucagon ⊖)</text><circle class="vdot" cx="1924.2" cy="799.8" r="5" fill="#2f3542"><title>Biotin (B7)</title></circle></g>
+<g class="enz" data-k="cit_c&gt;acoa_c&gt;ATP citrate lyase (⊖ bempedoic acid)" data-ei="75" data-dz="" data-vit=""><rect class="lbg" x="1751.0" y="864" width="234.7" height="17.5" rx="3"/><text x="1753.0" y="874" class="et">ATP citrate lyase (⊖ bempedoic acid)</text></g>
+<g class="enz" data-k="acoa_oaa&gt;cit_m&gt;Citrate synthase" data-ei="78" data-dz="" data-vit=""><rect class="lbg" x="1751.0" y="995" width="102.4" height="17.5" rx="3"/><text x="1753.0" y="1005" class="et">Citrate synthase</text></g>
+<g class="enz" data-k="fa&gt;acylcoa&gt;Fatty acyl-CoA" data-ei="80" data-dz="" data-vit=""><rect class="lbg" x="2121.0" y="798" width="93.2" height="33.0" rx="3"/><text x="2123.0" y="808" class="et">Fatty acyl-CoA</text><text x="2123.0" y="823.5" class="et">synthetase</text></g>
+<g class="enz" data-k="acylcoa&gt;cpt&gt;CPT I ★" data-ei="81" data-dz="" data-vit=""><rect class="lbg" x="2052.1" y="894" width="52.9" height="17.5" rx="3"/><text x="2054.1" y="904" class="et">CPT I ★</text></g>
+<g class="enz" data-k="cpt&gt;acylcoa_m&gt;CPT II" data-ei="82" data-dz="18" data-vit=""><rect class="lbg" x="2121.0" y="941" width="106.9" height="33.0" rx="3"/><text x="2123.0" y="951" class="et">CPT II</text><g class="badge" data-d="18"><rect x="2123.0" y="955.5" width="18" height="15" rx="2"/><text x="2132.0" y="967.5">18</text></g><text x="2143.0" y="967.5" class="dzname">1° carnitine def.</text></g>
+<g class="enz" data-k="acylcoa_m&gt;acoa_m&gt;β-ox (acyl-CoA DH)" data-ei="83" data-dz="19" data-vit="B2 B3"><rect class="lbg" x="2121.0" y="1009" width="140.3" height="33.0" rx="3"/><text x="2123.0" y="1019" class="et">β-ox (acyl-CoA DH)</text><g class="badge" data-d="19"><rect x="2123.0" y="1023.5" width="18" height="15" rx="2"/><text x="2132.0" y="1035.5">19</text></g><text x="2143.0" y="1035.5" class="dzname">MCAD deficiency</text><circle class="vdot" cx="2239.3" cy="1031.3" r="5" fill="#4e8d8a"><title>Riboflavin (B2)</title></circle><circle class="vdot" cx="2251.3" cy="1031.3" r="5" fill="#f2a93b"><title>Niacin (B3)</title></circle></g>
+<g class="enz" data-k="macoa&gt;cpt&gt;⊖" data-ei="84" data-dz="" data-vit=""><rect class="lbg" x="2002.5" y="803" width="21.5" height="17.5" rx="3"/><text x="2004.5" y="813" class="et red">⊖</text></g>
+<g class="enz" data-k="oaa&gt;cit&gt;Citrate" data-ei="86" data-dz="" data-vit=""><rect class="lbg" x="1126.2" y="1233.9" width="58.8" height="33.0" rx="3"/><text x="1128.2" y="1243.9" class="et">Citrate</text><text x="1128.2" y="1259.4" class="et">synthase</text></g>
+<g class="enz" data-k="icit&gt;akg&gt;Isocitrate DH ★" data-ei="88" data-dz="" data-vit="B3"><rect class="lbg" x="1208.6" y="1304.3" width="114.5" height="17.5" rx="3"/><text x="1210.6" y="1314.3" class="et">Isocitrate DH ★</text><circle class="vdot" cx="1313.1" cy="1310.1" r="5" fill="#f2a93b"><title>Niacin (B3)</title></circle></g>
+<g class="enz" data-k="akg&gt;scoa&gt;α-KG DH" data-ei="89" data-dz="" data-vit="B1 B2 B3 B5"><rect class="lbg" x="1242.6" y="1389" width="73.4" height="48.5" rx="3"/><text x="1244.6" y="1399" class="et">α-KG DH</text><text x="1244.6" y="1414.5" class="et">⊖ arsenite</text><circle class="vdot" cx="1248.6" cy="1426.8" r="5" fill="#e8692c"><title>Thiamine (B1)</title></circle><circle class="vdot" cx="1260.6" cy="1426.8" r="5" fill="#4e8d8a"><title>Riboflavin (B2)</title></circle><circle class="vdot" cx="1272.6" cy="1426.8" r="5" fill="#f2a93b"><title>Niacin (B3)</title></circle><circle class="vdot" cx="1284.6" cy="1426.8" r="5" fill="#6b4ea0"><title>Pantothenic acid (B5)</title></circle></g>
+<g class="enz" data-k="acoa2&gt;aacoa&gt;Thiolase" data-ei="94" data-dz="" data-vit=""><rect class="lbg" x="1594.4" y="1178" width="55.1" height="17.5" rx="3"/><text x="1596.4" y="1188" class="et">Thiolase</text></g>
+<g class="enz" data-k="aacoa&gt;hmg&gt;HMG-CoA" data-ei="95" data-dz="" data-vit=""><rect class="lbg" x="1825.3" y="1133" width="65.5" height="33.0" rx="3"/><text x="1827.3" y="1143" class="et">HMG-CoA</text><text x="1827.3" y="1158.5" class="et">synthase</text></g>
+<g class="enz" data-k="hmg&gt;mev&gt;HMG-CoA" data-ei="96" data-dz="" data-vit=""><rect class="lbg" x="2014.6" y="1183" width="80.9" height="33.0" rx="3"/><text x="2016.6" y="1193" class="et">HMG-CoA</text><text x="2016.6" y="1208.5" class="et">reductase ★</text></g>
+<g class="enz" data-k="mev&gt;chol&gt;→ squalene →" data-ei="97" data-dz="" data-vit=""><rect class="lbg" x="2156.0" y="1211" width="89.6" height="33.0" rx="3"/><text x="2158.0" y="1221" class="et">→ squalene →</text><text x="2158.0" y="1236.5" class="et">lanosterol</text></g>
+<g class="enz" data-k="hmg&gt;acac&gt;HMG-CoA lyase" data-ei="98" data-dz="" data-vit=""><rect class="lbg" x="1853.4" y="1216" width="100.6" height="17.5" rx="3"/><text x="1855.4" y="1226" class="et">HMG-CoA lyase</text></g>
+<g class="enz" data-k="acac&gt;bhb&gt;β-HB DH (NADH)" data-ei="99" data-dz="" data-vit=""><rect class="lbg" x="1847.5" y="1323" width="106.5" height="17.5" rx="3"/><text x="1849.5" y="1333" class="et">β-HB DH (NADH)</text></g>
+<g class="enz" data-k="acac&gt;acetone&gt;spontaneous" data-ei="100" data-dz="" data-vit=""><rect class="lbg" x="1793.9" y="1258" width="82.2" height="17.5" rx="3"/><text x="1795.9" y="1268" class="et">spontaneous</text></g>
+<g class="enz" data-k="nh3&gt;cpu&gt;CPS I ★" data-ei="101" data-dz="26" data-vit=""><rect class="lbg" x="133.2" y="1211" width="110.8" height="33.0" rx="3"/><text x="135.2" y="1221" class="et">CPS I ★</text><g class="badge" data-d="26"><rect x="135.2" y="1225.5" width="18" height="15" rx="2"/><text x="144.2" y="1237.5">26</text></g><text x="155.2" y="1237.5" class="dzname">CPS I deficiency</text></g>
+<g class="enz" data-k="orn&gt;citr&gt;Ornithine" data-ei="103" data-dz="5" data-vit=""><rect class="lbg" x="526.0" y="1231" width="112.1" height="48.5" rx="3"/><text x="528.0" y="1241" class="et">Ornithine</text><text x="528.0" y="1256.5" class="et">transcarbamylase</text><g class="badge" data-d="5"><rect x="528.0" y="1261" width="18" height="15" rx="2"/><text x="537.0" y="1273">5</text></g><text x="548.0" y="1273" class="dzname">OTC deficiency</text></g>
+<g class="enz" data-k="citr&gt;as&gt;Argininosuccinate" data-ei="104" data-dz="" data-vit=""><rect class="lbg" x="624.1" y="1201" width="112.9" height="33.0" rx="3"/><text x="626.1" y="1211" class="et">Argininosuccinate</text><text x="626.1" y="1226.5" class="et">synthetase</text></g>
+<g class="enz" data-k="as&gt;arg&gt;Argininosuccinate" data-ei="106" data-dz="" data-vit=""><rect class="lbg" x="624.1" y="1353" width="112.9" height="33.0" rx="3"/><text x="626.1" y="1363" class="et">Argininosuccinate</text><text x="626.1" y="1378.5" class="et">lyase</text></g>
+<g class="enz" data-k="arg&gt;orn&gt;Arginase" data-ei="107" data-dz="" data-vit=""><rect class="lbg" x="472.5" y="1387" width="57.5" height="17.5" rx="3"/><text x="474.5" y="1397" class="et">Arginase</text></g>
+<g class="enz" data-k="arg&gt;urea&gt;+ H₂O" data-ei="108" data-dz="" data-vit=""><rect class="lbg" x="722.0" y="1414" width="40.0" height="17.5" rx="3"/><text x="724.0" y="1424" class="et">+ H₂O</text></g>
+<g class="enz" data-k="fum_u&gt;fum&gt;to TCA" data-ei="111" data-dz="" data-vit=""><rect class="lbg" x="922.6" y="1309" width="44.9" height="17.5" rx="3"/><text x="924.6" y="1319" class="et">to TCA</text></g>
+<g class="enz" data-k="phe&gt;tyr&gt;Phe hydroxylase" data-ei="112" data-dz="6" data-vit=""><rect class="lbg" x="376.0" y="1635.8" width="103.4" height="48.5" rx="3"/><text x="378.0" y="1645.8" class="et">Phe hydroxylase</text><text x="378.0" y="1661.3" class="et">(BH₄)</text><g class="badge" data-d="6"><rect x="378.0" y="1665.8" width="18" height="15" rx="2"/><text x="387.0" y="1677.8">6</text></g><text x="398.0" y="1677.8" class="dzname">PKU</text></g>
+<g class="enz" data-k="tyr&gt;dopa&gt;Tyr hydroxylase" data-ei="114" data-dz="" data-vit=""><rect class="lbg" x="376.0" y="1734.4" width="99.9" height="33.0" rx="3"/><text x="378.0" y="1744.4" class="et">Tyr hydroxylase</text><text x="378.0" y="1759.9" class="et">(BH₄)</text></g>
+<g class="enz" data-k="dopa&gt;melanin&gt;Tyrosinase" data-ei="115" data-dz="8" data-vit=""><rect class="lbg" x="474.0" y="1763.5" width="72.1" height="33.0" rx="3"/><text x="476.0" y="1773.5" class="et">Tyrosinase</text><g class="badge" data-d="8"><rect x="476.0" y="1778" width="18" height="15" rx="2"/><text x="485.0" y="1790">8</text></g><text x="496.0" y="1790" class="dzname">Albinism</text></g>
+<g class="enz" data-k="dopa&gt;dopamine&gt;DOPA decarboxylase (⊖ carbidopa)" data-ei="116" data-dz="" data-vit="B6"><rect class="lbg" x="376.0" y="1834" width="241.5" height="17.5" rx="3"/><text x="378.0" y="1844" class="et">DOPA decarboxylase (⊖ carbidopa)</text><circle class="vdot" cx="607.5" cy="1839.8" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="dopamine&gt;hva&gt;MAO, COMT" data-ei="117" data-dz="" data-vit=""><rect class="lbg" x="450.6" y="1867.6" width="78.8" height="17.5" rx="3"/><text x="452.6" y="1877.6" class="et">MAO, COMT</text></g>
+<g class="enz" data-k="dopamine&gt;ne&gt;Dopamine β-" data-ei="118" data-dz="" data-vit=""><rect class="lbg" x="376.0" y="1913.6" width="116.9" height="33.0" rx="3"/><text x="378.0" y="1923.6" class="et">Dopamine β-</text><text x="378.0" y="1939.1" class="et">hydroxylase (vit C)</text></g>
+<g class="enz" data-k="ne&gt;nmeta&gt;COMT" data-ei="119" data-dz="" data-vit=""><rect class="lbg" x="458.7" y="1957.2" width="42.6" height="17.5" rx="3"/><text x="460.7" y="1967.2" class="et">COMT</text></g>
+<g class="enz" data-k="ne&gt;epi&gt;PNMT (SAM)" data-ei="120" data-dz="" data-vit=""><rect class="lbg" x="376.0" y="2003.2" width="82.5" height="17.5" rx="3"/><text x="378.0" y="2013.2" class="et">PNMT (SAM)</text></g>
+<g class="enz" data-k="nmeta&gt;vma&gt;MAO" data-ei="121" data-dz="" data-vit=""><rect class="lbg" x="606.0" y="2055.8" width="33.6" height="17.5" rx="3"/><text x="608.0" y="2065.8" class="et">MAO</text></g>
+<g class="enz" data-k="epi&gt;meta&gt;COMT" data-ei="122" data-dz="" data-vit=""><rect class="lbg" x="376.0" y="2101.7" width="42.6" height="17.5" rx="3"/><text x="378.0" y="2111.7" class="et">COMT</text></g>
+<g class="enz" data-k="meta&gt;vma&gt;MAO" data-ei="123" data-dz="" data-vit=""><rect class="lbg" x="453.2" y="2130.8" width="33.6" height="17.5" rx="3"/><text x="455.2" y="2140.8" class="et">MAO</text></g>
+<g class="enz" data-k="hga&gt;maa&gt;Homogentisate" data-ei="124" data-dz="7" data-vit=""><rect class="lbg" x="136.0" y="1734.4" width="95.6" height="48.5" rx="3"/><text x="138.0" y="1744.4" class="et">Homogentisate</text><text x="138.0" y="1759.9" class="et">oxidase</text><g class="badge" data-d="7"><rect x="138.0" y="1764.4" width="18" height="15" rx="2"/><text x="147.0" y="1776.4">7</text></g><text x="158.0" y="1776.4" class="dzname">Alkaptonuria</text></g>
+<g class="enz" data-k="maa&gt;faa&gt;Isomerase" data-ei="125" data-dz="" data-vit=""><rect class="lbg" x="136.0" y="1868.8" width="66.6" height="17.5" rx="3"/><text x="138.0" y="1878.8" class="et">Isomerase</text></g>
+<g class="enz" data-k="d_trp&gt;d_nia&gt;B₆" data-ei="129" data-dz="" data-vit="B6"><rect class="lbg" x="750.0" y="1714.2" width="34.0" height="17.5" rx="3"/><text x="752.0" y="1724.2" class="et">B₆</text><circle class="vdot" cx="774.0" cy="1720" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="d_trp&gt;d_ser&gt;BH₄, B₆" data-ei="131" data-dz="" data-vit="B6"><rect class="lbg" x="719.4" y="1768" width="64.6" height="17.5" rx="3"/><text x="721.4" y="1778" class="et">BH₄, B₆</text><circle class="vdot" cx="774.0" cy="1773.8" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="d_his&gt;d_hist&gt;B₆" data-ei="133" data-dz="" data-vit="B6"><rect class="lbg" x="772.0" y="1818.4" width="34.0" height="17.5" rx="3"/><text x="774.0" y="1828.4" class="et">B₆</text><circle class="vdot" cx="796.0" cy="1824.2" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="d_gly&gt;d_por&gt;B₆" data-ei="134" data-dz="" data-vit="B6"><rect class="lbg" x="772.0" y="1860.9" width="34.0" height="17.5" rx="3"/><text x="774.0" y="1870.9" class="et">B₆</text><circle class="vdot" cx="796.0" cy="1866.7" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="d_glu&gt;d_gaba&gt;B₆" data-ei="136" data-dz="" data-vit="B6"><rect class="lbg" x="750.0" y="1904.6" width="34.0" height="17.5" rx="3"/><text x="752.0" y="1914.6" class="et">B₆</text><circle class="vdot" cx="774.0" cy="1910.4" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="d_arg&gt;d_no&gt;BH₄" data-ei="140" data-dz="" data-vit=""><rect class="lbg" x="758.5" y="2029.5" width="27.6" height="17.5" rx="3"/><text x="760.5" y="2039.5" class="et">BH₄</text></g>
+<g class="enz" data-k="val&gt;aka&gt;BCAA" data-ei="141" data-dz="" data-vit="B6"><rect class="lbg" x="1096.0" y="2308.9" width="85.1" height="33.0" rx="3"/><text x="1098.0" y="2318.9" class="et">BCAA</text><text x="1098.0" y="2334.4" class="et">transaminase</text><circle class="vdot" cx="1141.3" cy="2314.7" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="aka&gt;prop&gt;Branched-chain" data-ei="143" data-dz="20" data-vit="B1 B2 B3 B5"><rect class="lbg" x="1098.0" y="2113.5" width="107.8" height="48.5" rx="3"/><text x="1100.0" y="2123.5" class="et">Branched-chain</text><text x="1100.0" y="2139" class="et">α-ketoacid DH</text><g class="badge" data-d="20"><rect x="1100.0" y="2143.5" width="18" height="15" rx="2"/><text x="1109.0" y="2155.5">20</text></g><text x="1120.0" y="2155.5" class="dzname">MSUD</text><circle class="vdot" cx="1159.8" cy="2151.3" r="5" fill="#e8692c"><title>Thiamine (B1)</title></circle><circle class="vdot" cx="1171.8" cy="2151.3" r="5" fill="#4e8d8a"><title>Riboflavin (B2)</title></circle><circle class="vdot" cx="1183.8" cy="2151.3" r="5" fill="#f2a93b"><title>Niacin (B3)</title></circle><circle class="vdot" cx="1195.8" cy="2151.3" r="5" fill="#6b4ea0"><title>Pantothenic acid (B5)</title></circle></g>
+<g class="enz" data-k="prop&gt;mmcoa&gt;Propionyl-CoA carboxylase" data-ei="145" data-dz="27" data-vit="B7"><rect class="lbg" x="1336.0" y="2008" width="168.9" height="33.0" rx="3"/><text x="1338.0" y="2018" class="et">Propionyl-CoA carboxylase</text><g class="badge" data-d="27"><rect x="1338.0" y="2022.5" width="18" height="15" rx="2"/><text x="1347.0" y="2034.5">27</text></g><text x="1358.0" y="2034.5" class="dzname">Propionic acidemia</text><circle class="vdot" cx="1462.6" cy="2030.3" r="5" fill="#2f3542"><title>Biotin (B7)</title></circle></g>
+<g class="enz" data-k="met&gt;prop&gt;(via α-" data-ei="146" data-dz="" data-vit=""><rect class="lbg" x="1407.4" y="2113.5" width="85.1" height="33.0" rx="3"/><text x="1409.4" y="2123.5" class="et">(via α-</text><text x="1409.4" y="2139" class="et">ketobutyrate)</text></g>
+<g class="enz" data-k="met&gt;sam&gt;MAT (ATP)" data-ei="147" data-dz="" data-vit=""><rect class="lbg" x="1566.0" y="2191.5" width="68.4" height="17.5" rx="3"/><text x="1568.0" y="2201.5" class="et">MAT (ATP)</text></g>
+<g class="enz" data-k="sam&gt;sah&gt;Methyl donor → DNA methylation (imprinting)" data-ei="148" data-dz="" data-vit=""><rect class="lbg" x="1566.2" y="2324.5" width="277.5" height="17.5" rx="3"/><text x="1568.2" y="2334.5" class="et">Methyl donor → DNA methylation (imprinting)</text></g>
+<g class="enz" data-k="sah&gt;hcy&gt;SAH hydrolase" data-ei="149" data-dz="" data-vit=""><rect class="lbg" x="1856.0" y="2213.5" width="92.7" height="33.0" rx="3"/><text x="1858.0" y="2223.5" class="et">SAH hydrolase</text><text x="1858.0" y="2239" class="et">(+ adenosine)</text></g>
+<g class="enz" data-k="hcy&gt;met&gt;Methionine synthase" data-ei="150" data-dz="21" data-vit="B12"><rect class="lbg" x="1640.3" y="2065.5" width="129.5" height="33.0" rx="3"/><text x="1642.3" y="2075.5" class="et">Methionine synthase</text><g class="badge" data-d="21"><rect x="1642.3" y="2080" width="18" height="15" rx="2"/><text x="1651.3" y="2092">21</text></g><text x="1662.3" y="2092" class="dzname">Homocystinuria</text><circle class="vdot" cx="1750.6" cy="2087.8" r="5" fill="#9bb52f"><title>Cobalamin (B12)</title></circle></g>
+<g class="enz" data-k="mthy&gt;mthf&gt;MTHFR" data-ei="152" data-dz="21" data-vit="B2"><rect class="lbg" x="1682.5" y="1872.1" width="120.3" height="33.0" rx="3"/><text x="1684.5" y="1882.1" class="et">MTHFR</text><g class="badge" data-d="21"><rect x="1684.5" y="1886.6" width="18" height="15" rx="2"/><text x="1693.5" y="1898.6">21</text></g><text x="1704.5" y="1898.6" class="dzname">Homocystinuria</text><circle class="vdot" cx="1792.7" cy="1894.4" r="5" fill="#4e8d8a"><title>Riboflavin (B2)</title></circle></g>
+<g class="enz" data-k="mthf&gt;thf&gt;THF regenerated" data-ei="153" data-dz="" data-vit="B9"><rect class="lbg" x="1589.0" y="1968.8" width="121.9" height="17.5" rx="3"/><text x="1591.0" y="1978.8" class="et">THF regenerated</text><circle class="vdot" cx="1701.0" cy="1974.6" r="5" fill="#3aa6dd"><title>Folate (B9)</title></circle></g>
+<g class="enz" data-k="mthf&gt;hcy&gt;CH₃" data-ei="154" data-dz="" data-vit=""><rect class="lbg" x="1856.0" y="1999" width="28.4" height="17.5" rx="3"/><text x="1858.0" y="2009" class="et">CH₃</text></g>
+<g class="enz" data-k="hcy&gt;cysta&gt;Cystathionine β-synthase" data-ei="155" data-dz="21" data-vit="B6"><rect class="lbg" x="1880.6" y="2053.5" width="158.8" height="33.0" rx="3"/><text x="1882.6" y="2063.5" class="et">Cystathionine β-synthase</text><g class="badge" data-d="21"><rect x="1882.6" y="2068" width="18" height="15" rx="2"/><text x="1891.6" y="2080">21</text></g><text x="1902.6" y="2080" class="dzname">Homocystinuria</text><circle class="vdot" cx="1990.9" cy="2075.8" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="cysta&gt;cys&gt;Cystathionase" data-ei="156" data-dz="" data-vit="B6"><rect class="lbg" x="2081.8" y="2069.5" width="106.4" height="17.5" rx="3"/><text x="2083.8" y="2079.5" class="et">Cystathionase</text><circle class="vdot" cx="2178.2" cy="2075.3" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="m_pyr&gt;m_lac&gt;LDH" data-ei="162" data-dz="" data-vit=""><rect class="lbg" x="1739.4" y="1709.9" width="29.6" height="17.5" rx="3"/><text x="1741.4" y="1719.9" class="et">LDH</text></g>
+<g class="enz" data-k="l_lac&gt;l_pyr&gt;LDH" data-ei="168" data-dz="" data-vit=""><rect class="lbg" x="1966.0" y="1709.9" width="29.6" height="17.5" rx="3"/><text x="1968.0" y="1719.9" class="et">LDH</text></g>
+<g class="enz" data-k="l_glu&gt;l_urea&gt;urea cycle" data-ei="170" data-dz="" data-vit=""><rect class="lbg" x="2126.0" y="1709.9" width="66.1" height="17.5" rx="3"/><text x="2128.0" y="1719.9" class="et">urea cycle</text></g>
+<g class="enz" data-k="tg2&gt;gf&gt;Hormone-sensitive lipase" data-ei="171" data-dz="" data-vit=""><rect class="lbg" x="2082.9" y="553" width="158.2" height="33.0" rx="3"/><text x="2084.9" y="563" class="et">Hormone-sensitive lipase</text><text x="2084.9" y="578.5" class="et">(glucagon ⊕, insulin ⊖)</text></g>
+<g class="enz" data-k="gf&gt;g3p2&gt;Glycerol" data-ei="172" data-dz="" data-vit=""><rect class="lbg" x="1964.3" y="567" width="81.5" height="33.0" rx="3"/><text x="1966.3" y="577" class="et">Glycerol</text><text x="1966.3" y="592.5" class="et">kinase (liver)</text></g>
+<g class="enz" data-k="dhap2&gt;energy&gt;glycolysis" data-ei="174" data-dz="" data-vit=""><rect class="lbg" x="1788.0" y="573" width="64.2" height="17.5" rx="3"/><text x="1790.0" y="583" class="et">glycolysis</text></g>
+<g class="enz" data-k="dhap2&gt;gluc2&gt;gluconeogenesis" data-ei="175" data-dz="" data-vit=""><rect class="lbg" x="1788.0" y="616" width="107.0" height="17.5" rx="3"/><text x="1790.0" y="626" class="et">gluconeogenesis</text></g>
+<g class="enz" data-k="l_gm2&gt;l_gm3&gt;① Hexosaminidase A" data-ei="177" data-dz="40" data-vit=""><rect class="lbg" x="275.8" y="3122" width="136.2" height="33.0" rx="3"/><text x="277.8" y="3132" class="et">① Hexosaminidase A</text><g class="badge" data-d="40"><rect x="277.8" y="3136.5" width="18" height="15" rx="2"/><text x="286.8" y="3148.5">40</text></g><text x="297.8" y="3148.5" class="dzname">Tay-Sachs</text></g>
+<g class="enz" data-k="l_cth&gt;l_gluc&gt;② α-Galactosidase A" data-ei="179" data-dz="41" data-vit=""><rect class="lbg" x="806.0" y="3133" width="136.0" height="33.0" rx="3"/><text x="808.0" y="3143" class="et">② α-Galactosidase A</text><g class="badge" data-d="41"><rect x="808.0" y="3147.5" width="18" height="15" rx="2"/><text x="817.0" y="3159.5">41</text></g><text x="828.0" y="3159.5" class="dzname">Fabry</text></g>
+<g class="enz" data-k="l_gluc&gt;l_cer&gt;⑤ Glucocerebrosidase" data-ei="180" data-dz="44" data-vit=""><rect class="lbg" x="626.0" y="3182" width="145.8" height="33.0" rx="3"/><text x="628.0" y="3192" class="et">⑤ Glucocerebrosidase</text><g class="badge" data-d="44"><rect x="628.0" y="3196.5" width="18" height="15" rx="2"/><text x="637.0" y="3208.5">44</text></g><text x="648.0" y="3208.5" class="dzname">Gaucher</text></g>
+<g class="enz" data-k="l_sulf&gt;l_galc&gt;③ Arylsulfatase A" data-ei="181" data-dz="42" data-vit=""><rect class="lbg" x="206.0" y="3182" width="120.8" height="33.0" rx="3"/><text x="208.0" y="3192" class="et">③ Arylsulfatase A</text><g class="badge" data-d="42"><rect x="208.0" y="3196.5" width="18" height="15" rx="2"/><text x="217.0" y="3208.5">42</text></g><text x="228.0" y="3208.5" class="dzname">Metachromatic LD</text></g>
+<g class="enz" data-k="l_galc&gt;l_cer&gt;④ Galactocerebrosidase" data-ei="182" data-dz="43" data-vit=""><rect class="lbg" x="346.7" y="3194" width="156.7" height="33.0" rx="3"/><text x="348.7" y="3204" class="et">④ Galactocerebrosidase</text><g class="badge" data-d="43"><rect x="348.7" y="3208.5" width="18" height="15" rx="2"/><text x="357.7" y="3220.5">43</text></g><text x="368.7" y="3220.5" class="dzname">Krabbe</text></g>
+<g class="enz" data-k="l_sm&gt;l_cer&gt;⑥ Sphingomyelinase" data-ei="183" data-dz="45" data-vit=""><rect class="lbg" x="792.4" y="3194" width="135.2" height="33.0" rx="3"/><text x="794.4" y="3204" class="et">⑥ Sphingomyelinase</text><g class="badge" data-d="45"><rect x="794.4" y="3208.5" width="18" height="15" rx="2"/><text x="803.4" y="3220.5">45</text></g><text x="814.4" y="3220.5" class="dzname">Niemann-Pick</text></g>
+<g class="enz" data-k="etoh&gt;acald&gt;Alcohol dehydrogenase (NAD⁺→NADH)" data-ei="184" data-dz="" data-vit=""><rect class="lbg" x="133.1" y="2863.1" width="241.2" height="17.5" rx="3"/><text x="135.1" y="2873.1" class="et">Alcohol dehydrogenase (NAD⁺→NADH)</text></g>
+<g class="enz" data-k="etoh&gt;acald&gt;CYP2E1 (microsome; NADPH→NADP⁺, → ROS)" data-ei="185" data-dz="" data-vit=""><rect class="lbg" x="122.9" y="2804" width="284.3" height="17.5" rx="3"/><text x="124.9" y="2814" class="et">CYP2E1 (microsome; NADPH→NADP⁺, → ROS)</text></g>
+<g class="enz" data-k="etoh&gt;acald&gt;Catalase (peroxisome; H₂O₂ → H₂O)" data-ei="186" data-dz="" data-vit=""><rect class="lbg" x="155.5" y="2924" width="219.1" height="17.5" rx="3"/><text x="157.5" y="2934" class="et">Catalase (peroxisome; H₂O₂ → H₂O)</text></g>
+<g class="enz" data-k="acald&gt;acet&gt;Acetaldehyde DH (mitochondria)" data-ei="187" data-dz="39" data-vit=""><rect class="lbg" x="524.6" y="2833" width="200.8" height="48.5" rx="3"/><text x="526.6" y="2843" class="et">Acetaldehyde DH (mitochondria)</text><text x="526.6" y="2858.5" class="et">NAD⁺→NADH · ⊖ disulfiram</text><g class="badge" data-d="39"><rect x="526.6" y="2863" width="18" height="15" rx="2"/><text x="535.6" y="2875">39</text></g><text x="546.6" y="2875" class="dzname">Asian flush</text></g>
+<g class="enz" data-k="e_dhap&gt;e_g3p&gt;④A" data-ei="188" data-dz="" data-vit=""><rect class="lbg" x="1189.8" y="2814" width="30.4" height="17.5" rx="3"/><text x="1191.8" y="2824" class="et">④A</text></g>
+<g class="enz" data-k="e_g3p&gt;e_tg&gt;esterification" data-ei="189" data-dz="" data-vit=""><rect class="lbg" x="1410.4" y="2814" width="83.2" height="17.5" rx="3"/><text x="1412.4" y="2824" class="et">esterification</text></g>
+<g class="enz" data-k="e_pyr&gt;e_lac&gt;①" data-ei="190" data-dz="" data-vit=""><rect class="lbg" x="1194.2" y="2874" width="21.5" height="17.5" rx="3"/><text x="1196.2" y="2884" class="et">①</text></g>
+<g class="enz" data-k="e_acoa&gt;e_keto&gt;③" data-ei="191" data-dz="" data-vit=""><rect class="lbg" x="1194.2" y="2934" width="21.5" height="17.5" rx="3"/><text x="1196.2" y="2944" class="et">③</text></g>
+<g class="enz" data-k="e_acoa&gt;e_fa&gt;④B lipogenesis" data-ei="192" data-dz="" data-vit=""><rect class="lbg" x="1249.1" y="2994" width="101.8" height="17.5" rx="3"/><text x="1251.1" y="3004" class="et">④B lipogenesis</text></g>
+<g class="enz" data-k="e_oaa&gt;e_mal&gt;②" data-ei="194" data-dz="" data-vit=""><rect class="lbg" x="1984.2" y="2904" width="21.5" height="17.5" rx="3"/><text x="1986.2" y="2914" class="et">②</text></g>
+<g class="enz" data-k="e_oaa&gt;e_glc&gt;↓ gluconeogenesis" data-ei="195" data-dz="" data-vit=""><rect class="lbg" x="1896.0" y="2864" width="142.3" height="33.0" rx="3"/><text x="1898.0" y="2874" class="et">↓ gluconeogenesis</text><text x="1898.0" y="2889.5" class="et">(fasting hypoglycemia)</text></g>
+<g class="enz" data-k="h_sg&gt;h_ala&gt;ALA synthase ★" data-ei="196" data-dz="33" data-vit="B6"><rect class="lbg" x="187.1" y="2546" width="145.9" height="48.5" rx="3"/><text x="189.1" y="2556" class="et">ALA synthase ★</text><text x="189.1" y="2571.5" class="et">(⊖ heme)</text><g class="badge" data-d="33"><rect x="189.1" y="2576" width="18" height="15" rx="2"/><text x="198.1" y="2588">33</text></g><text x="209.1" y="2588" class="dzname">Sideroblastic anemia</text><circle class="vdot" cx="322.9" cy="2583.8" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="h_ala&gt;h_pbg&gt;ALA dehydratase" data-ei="197" data-dz="34" data-vit=""><rect class="lbg" x="480.3" y="2546" width="107.4" height="48.5" rx="3"/><text x="482.3" y="2556" class="et">ALA dehydratase</text><text x="482.3" y="2571.5" class="et">(⊖ lead)</text><g class="badge" data-d="34"><rect x="482.3" y="2576" width="18" height="15" rx="2"/><text x="491.3" y="2588">34</text></g><text x="502.3" y="2588" class="dzname">Lead poisoning</text></g>
+<g class="enz" data-k="h_pbg&gt;h_hmb&gt;PBG deaminase" data-ei="198" data-dz="35" data-vit=""><rect class="lbg" x="711.6" y="2562" width="98.9" height="33.0" rx="3"/><text x="713.6" y="2572" class="et">PBG deaminase</text><g class="badge" data-d="35"><rect x="713.6" y="2576.5" width="18" height="15" rx="2"/><text x="722.6" y="2588.5">35</text></g><text x="733.6" y="2588.5" class="dzname">AIP</text></g>
+<g class="enz" data-k="h_hmb&gt;h_uro&gt;Uroporphyrinogen" data-ei="199" data-dz="" data-vit=""><rect class="lbg" x="956.4" y="2565.6" width="114.6" height="33.0" rx="3"/><text x="958.4" y="2575.6" class="et">Uroporphyrinogen</text><text x="958.4" y="2591.1" class="et">III synthase</text></g>
+<g class="enz" data-k="h_uro&gt;h_copro&gt;UROD" data-ei="200" data-dz="36" data-vit=""><rect class="lbg" x="1235.2" y="2574.5" width="49.4" height="33.0" rx="3"/><text x="1237.2" y="2584.5" class="et">UROD</text><g class="badge" data-d="36"><rect x="1237.2" y="2589" width="18" height="15" rx="2"/><text x="1246.2" y="2601">36</text></g><text x="1257.2" y="2601" class="dzname">PCT</text></g>
+<g class="enz" data-k="h_copro&gt;h_proto&gt;Coproporphyrinogen" data-ei="201" data-dz="" data-vit=""><rect class="lbg" x="1460.0" y="2565.6" width="129.9" height="33.0" rx="3"/><text x="1462.0" y="2575.6" class="et">Coproporphyrinogen</text><text x="1462.0" y="2591.1" class="et">oxidase</text></g>
+<g class="enz" data-k="h_proto&gt;h_heme&gt;Ferrochelatase" data-ei="202" data-dz="34" data-vit=""><rect class="lbg" x="1708.3" y="2546" width="105.5" height="48.5" rx="3"/><text x="1710.3" y="2556" class="et">Ferrochelatase</text><text x="1710.3" y="2571.5" class="et">(+ Fe²⁺; ⊖ lead)</text><g class="badge" data-d="34"><rect x="1710.3" y="2576" width="18" height="15" rx="2"/><text x="1719.3" y="2588">34</text></g><text x="1730.3" y="2588" class="dzname">Lead poisoning</text></g>
+<g class="enz" data-k="t_akg1&gt;t_glu&gt;ALT" data-ei="204" data-dz="" data-vit="B6"><rect class="lbg" x="190.5" y="2251" width="43.1" height="17.5" rx="3"/><text x="192.5" y="2261" class="et">ALT</text><circle class="vdot" cx="223.5" cy="2256.8" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="t_oaa&gt;t_asp&gt;AST" data-ei="206" data-dz="" data-vit="B6"><rect class="lbg" x="427.4" y="2299" width="45.2" height="17.5" rx="3"/><text x="429.4" y="2309" class="et">AST</text><circle class="vdot" cx="462.6" cy="2304.8" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-k="dn_glu&gt;dn_nh3&gt;Glutamate DH (+ H₂O)" data-ei="207" data-dz="" data-vit=""><rect class="lbg" x="128.0" y="2352" width="136.0" height="17.5" rx="3"/><text x="130.0" y="2362" class="et">Glutamate DH (+ H₂O)</text></g>
+<g class="enz" data-k="dn_nh3&gt;dn_urea&gt;urea cycle (liver)" data-ei="208" data-dz="" data-vit=""><rect class="lbg" x="345.8" y="2351" width="104.5" height="17.5" rx="3"/><text x="347.8" y="2361" class="et">urea cycle (liver)</text></g>
+<g class="enz" data-k="dn_urea&gt;dn_kid&gt;via blood" data-ei="209" data-dz="" data-vit=""><rect class="lbg" x="490.5" y="2351" width="58.9" height="17.5" rx="3"/><text x="492.5" y="2361" class="et">via blood</text></g>
+<g class="enz" data-k="g6p_h&gt;pg&gt;G6PD ★" data-ei="211" data-dz="2" data-vit=""><rect class="lbg" x="735.0" y="94.0" width="109.0" height="48.5" rx="3"/><text x="737.0" y="104.0" class="et">G6PD ★</text><text x="737.0" y="119.5" class="et">NADP⁺ → <tspan text-decoration="underline">NADPH</tspan></text><g class="badge" data-d="2"><rect x="737.0" y="124.0" width="18" height="15" rx="2"/><text x="746.0" y="136.0">2</text></g><text x="757.0" y="136.0" class="dzname">G6PD def.</text></g>
+<g class="enz" data-k="g1p&gt;g6p_g&gt;Phosphoglucomutase" data-ei="213" data-dz="" data-vit=""><rect class="lbg" x="1378.5" y="121.0" width="134.9" height="17.5" rx="3"/><text x="1380.5" y="131.0" class="et">Phosphoglucomutase</text></g>
+<g class="enz" data-k="pyr&gt;oaa_g&gt;Pyruvate" data-ei="218" data-dz="" data-vit="B7"><rect class="lbg" x="1038.0" y="842.0" width="77.6" height="33.0" rx="3"/><text x="1040.0" y="852.0" class="et">Pyruvate</text><text x="1040.0" y="867.5" class="et">carboxylase</text><circle class="vdot" cx="1101.7" cy="847.8" r="5" fill="#2f3542"><title>Biotin (B7)</title></circle></g>
+<g class="enz" data-k="oaa_g&gt;pep&gt;PEPCK (GTP)" data-ei="219" data-dz="" data-vit=""><rect class="lbg" x="1019.0" y="684.0" width="88.4" height="33.0" rx="3"/><text x="1021.0" y="694.0" class="et">PEPCK (GTP)</text><text x="1021.0" y="709.5" class="et">malate shuttle</text></g>
+<g class="enz" data-k="acoa_m&gt;acoa2&gt;TCA cycle, Ketone bodies (liver)" data-ei="221" data-dz="" data-vit=""><rect class="lbg" x="1861.7" y="1068" width="196.6" height="17.5" rx="3"/><text x="1863.7" y="1078" class="et">TCA cycle, Ketone bodies (liver)</text></g>
+<g class="enz" data-k="mmcoa&gt;scoa_o&gt;Methylmalonyl-CoA mutase" data-ei="222" data-dz="28" data-vit="B12"><rect class="lbg" x="1128.0" y="1967" width="171.0" height="33.0" rx="3"/><text x="1130.0" y="1977" class="et">Methylmalonyl-CoA mutase</text><g class="badge" data-d="28"><rect x="1130.0" y="1981.5" width="18" height="15" rx="2"/><text x="1139.0" y="1993.5">28</text></g><text x="1150.0" y="1993.5" class="dzname">Methylmalonic acidemia</text><circle class="vdot" cx="1281.3" cy="1989.3" r="5" fill="#9bb52f"><title>Cobalamin (B12)</title></circle></g>
+<g class="enz" data-ei="-1" data-dz="" data-vit=""><rect class="lbg" x="546.3" y="222.0" width="73.3" height="48.5" rx="3"/><text x="548.3" y="232.0" class="et">Glutathione</text><text x="548.3" y="247.5" class="et">reductase</text></g>
+<g class="enz" data-ei="-1" data-dz="" data-vit=""><rect class="lbg" x="680.3" y="222.0" width="73.3" height="48.5" rx="3"/><text x="682.3" y="232.0" class="et">Glutathione</text><text x="682.3" y="247.5" class="et">peroxidase</text></g>
+<g class="enz" data-ei="-1" data-dz="25" data-vit=""><rect class="lbg" x="1713.0" y="267" width="198.8" height="33.0" rx="3"/><text x="1715.0" y="277" class="et">Branching enzyme (α1,4 → α1,6)</text><g class="badge" data-d="25"><rect x="1715.0" y="281.5" width="18" height="15" rx="2"/><text x="1724.0" y="293.5">25</text></g><text x="1735.0" y="293.5" class="dzname">Andersen</text></g>
+<g class="enz" data-ei="-1" data-dz="38" data-vit=""><rect class="lbg" x="1713.0" y="303" width="185.7" height="33.0" rx="3"/><text x="1715.0" y="313" class="et">Liver glycogen phosphorylase</text><g class="badge" data-d="38"><rect x="1715.0" y="317.5" width="18" height="15" rx="2"/><text x="1724.0" y="329.5">38</text></g><text x="1735.0" y="329.5" class="dzname">Hers</text></g>
+<g class="enz" data-ei="-1" data-dz="24" data-vit=""><rect class="lbg" x="1606.0" y="214" width="81.2" height="48.5" rx="3"/><text x="1608.0" y="224" class="et">Debranching</text><text x="1608.0" y="239.5" class="et">enzyme</text><g class="badge" data-d="24"><rect x="1608.0" y="244" width="18" height="15" rx="2"/><text x="1617.0" y="256">24</text></g><text x="1628.0" y="256" class="dzname">Cori</text></g>
+<g class="enz" data-ei="-1" data-dz="29" data-vit=""><rect class="lbg" x="230.0" y="1297" width="133.0" height="33.0" rx="3"/><text x="232.0" y="1307" class="et">Ornithine translocase</text><g class="badge" data-d="29"><rect x="232.0" y="1311.5" width="18" height="15" rx="2"/><text x="241.0" y="1323.5">29</text></g><text x="252.0" y="1323.5" class="dzname">HHH syndrome</text></g>
+<g class="enz" data-ei="-1" data-dz="" data-vit="B6"><rect class="lbg" x="1520.9" y="1709.9" width="104.3" height="17.5" rx="3"/><text x="1522.9" y="1719.9" class="et">Transaminase</text><circle class="vdot" cx="1615.1" cy="1715.7" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-ei="-1" data-dz="" data-vit="B6"><rect class="lbg" x="1684.5" y="1709.9" width="43.1" height="17.5" rx="3"/><text x="1686.5" y="1719.9" class="et">ALT</text><circle class="vdot" cx="1717.5" cy="1715.7" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<g class="enz" data-ei="-1" data-dz="" data-vit="B6"><rect class="lbg" x="2018.5" y="1709.9" width="43.1" height="17.5" rx="3"/><text x="2020.5" y="1719.9" class="et">ALT</text><circle class="vdot" cx="2051.5" cy="1715.7" r="5" fill="#d6338a"><title>Pyridoxine (B6)</title></circle></g>
+<text x="480" y="202" class="notebold" text-anchor="start"><tspan text-decoration="underline">NADPH</tspan> keeps glutathione reduced (RBCs):</text>
+<text x="1715" y="258" class="note" text-anchor="start">Glycogenin primes synthesis</text>
+<text x="1833" y="222" class="note" text-anchor="middle">UDP-glucose ⇄ UDP-galactose</text>
+<text x="1833" y="238" class="note" text-anchor="middle">(4-epimerase interconverts)</text>
+<text x="1745" y="688" class="notebold" text-anchor="middle">SYNTHESIS</text>
+<text x="2115" y="688" class="notebold" text-anchor="middle">DEGRADATION (β-oxidation)</text>
+<text x="2258" y="905" class="note" text-anchor="end">cytosol</text>
+<text x="2258" y="1090" class="note" text-anchor="end">mito. matrix</text>
+<text x="2055" y="1229" class="drug" text-anchor="middle">⊖ statins</text>
+<text x="258" y="1218" class="note" text-anchor="start">2 ATP → 2 ADP + Pᵢ</text>
+<text x="35" y="1183" class="note" text-anchor="start">N-acetylglutamate →</text>
+<text x="35" y="1198" class="note" text-anchor="start">(allosteric activator)</text>
+<text x="878" y="1253" class="note" text-anchor="start">ATP → AMP + PPᵢ</text>
+<text x="864" y="1163" class="note" text-anchor="middle">from OAA</text>
+<text x="30" y="1316" class="notebold" text-anchor="start">Mitochondria</text>
+<text x="30" y="1350" class="notebold" text-anchor="start">Cytoplasm (liver)</text>
+<text x="378" y="2038.9" class="drug" text-anchor="start">⊕ cortisol</text>
+<text x="1560" y="2077.5" class="note" text-anchor="middle">↕ protein</text>
+<text x="1550" y="1878.5" class="notebold" text-anchor="middle">Folate cycle</text>
+<text x="1720" y="2210" class="notebold" text-anchor="middle">Methionine cycle</text>
+<text x="1628" y="1475.4" class="notebold" text-anchor="middle">MUSCLE</text>
+<text x="2092" y="1475.4" class="notebold" text-anchor="middle">LIVER</text>
+<text x="1442" y="1475.4" class="notebold" text-anchor="start">START →</text>
+<text x="1865" y="1543.4" class="notebold" text-anchor="middle">Cahill</text>
+<text x="1865" y="1557" class="notebold" text-anchor="middle">cycle</text>
+<text x="1865" y="1715.8" class="notebold" text-anchor="middle">Cori</text>
+<text x="1865" y="1729.4" class="notebold" text-anchor="middle">cycle</text>
+<text x="2198" y="1770.2" class="notebold" text-anchor="start">FINISH →</text>
+<text x="265" y="2902" class="drug" text-anchor="middle">cytosol · ⊖ fomepizole</text>
+<text x="1030" y="2798" class="notebold" text-anchor="start">↑ NADH/NAD⁺ ratio in liver after ethanol:</text>
+<text x="255" y="2642" class="notebold" text-anchor="middle">mitochondria</text>
+<text x="115" y="2638" class="note" text-anchor="middle">(from TCA cycle)</text>
+<text x="890" y="2642" class="notebold" text-anchor="middle">cytosol</text>
+<text x="1590" y="2642" class="notebold" text-anchor="middle">mitochondria</text>
+<text x="30" y="2193" class="notebold" text-anchor="start">Transamination (liver; B₆-dependent)</text>
+<text x="30" y="2337" class="notebold" text-anchor="start">Deamination → urea</text>
+<g class="mnemonic">
+<rect x="22" y="44" width="120" height="180" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="30" y="61" class="notebold">Mnemonic</text>
+<text x="30" y="79" class="note" style="font-size:13px"><tspan font-weight="800" fill="#b03a2e">G</tspan>reedy <tspan font-weight="800" fill="#b03a2e">C</tspan>ats <tspan font-weight="800" fill="#b03a2e">A</tspan>te</text>
+<text x="30" y="95" class="note" style="font-size:13px"><tspan font-weight="800" fill="#b03a2e">O</tspan>ranges, <tspan font-weight="800" fill="#b03a2e">P</tspan>urring</text>
+<text x="30" y="111" class="note" style="font-size:13px"><tspan font-weight="800" fill="#b03a2e">U</tspan>ntil <tspan font-weight="800" fill="#b03a2e">T</tspan>ired</text>
+<text x="30" y="129" class="note" style="font-size:11.4px">Glutamine ·</text>
+<text x="30" y="144" class="note" style="font-size:11.4px">Carbamoyl</text>
+<text x="30" y="158" class="note" style="font-size:11.4px">phosphate ·</text>
+<text x="30" y="172" class="note" style="font-size:11.4px">Aspartate ·</text>
+<text x="30" y="187" class="note" style="font-size:11.4px">Orotic acid ·</text>
+<text x="30" y="202" class="note" style="font-size:11.4px">PRPP · UMP ·</text>
+<text x="30" y="216" class="note" style="font-size:11.4px">Thymidine</text>
+</g>
+<g class="mnemonic">
+<rect x="690" y="2066" width="292" height="76" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="700" y="2084" class="notebold">Mnemonic</text>
+<text x="700" y="2102" class="note" style="font-size:13px"><tspan font-weight="800" fill="#b03a2e">P</tspan>ure <tspan font-weight="800" fill="#b03a2e">T</tspan>rue <tspan font-weight="800" fill="#b03a2e">L</tspan>ove <tspan font-weight="800" fill="#b03a2e">D</tspan>oes <tspan font-weight="800" fill="#b03a2e">N</tspan>ot <tspan font-weight="800" fill="#b03a2e">E</tspan>xist.</text>
+<text x="700" y="2120" class="note" style="font-size:11.4px">Phenylalanine · Tyrosine · L-DOPA ·</text>
+<text x="700" y="2134" class="note" style="font-size:11.4px">DOPA · NE · EPI</text>
+</g>
+<g class="mnemonic">
+<rect x="1338" y="749" width="266" height="160" rx="6" fill="#fcf1ef" stroke="#d4a39b" stroke-width="1.2"/>
+<text x="1346" y="764" class="notebold" style="font-size:11.4px">Fructose metabolism disorders</text>
+<text x="1346" y="777" class="notebold" style="font-size:11.4px">key findings</text>
+<text x="1346" y="792" class="note" style="font-size:10.2px"><tspan font-weight="800" fill="#b03a2e">Aldolase B</tspan> (liver) · <tspan font-weight="800" fill="#b03a2e">Aldolase A</tspan> (muscle)</text>
+<rect x="1346" y="799.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1355" y="811" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">16</text><text x="1368" y="811" class="note" style="font-size:10.2px"><tspan font-weight="700" fill="#3f5f6e">Essential fructosuria</tspan> (AR, fructokinase):</text>
+<text x="1368" y="824" class="note" style="font-size:10.2px">benign; fructose in blood &amp; urine</text>
+<rect x="1346" y="831.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1355" y="843" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">17</text><text x="1368" y="843" class="note" style="font-size:10.2px"><tspan font-weight="700" fill="#3f5f6e">HFI</tspan> (AR, aldolase B): ↑ F1P → ↓ Pi →</text>
+<text x="1368" y="856" class="note" style="font-size:10.2px">↓ glycogenolysis &amp; gluconeogenesis →</text>
+<text x="1354" y="869" class="note" style="font-size:10.2px">hypoglycemia, vomiting, jaundice, cirrhosis</text>
+<text x="1354" y="882" class="note" style="font-size:10.2px">after fruit/juice/honey; Rx ↓ fructose, sucrose</text>
+<text x="1346" y="899" class="note" style="font-size:10.2px">Urine: reducing sugar +, glucose oxidase −</text>
+</g>
+<g class="mnemonic">
+<rect x="1012" y="1637" width="240" height="106" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="1020" y="1654" class="notebold" style="font-size:12px">Mnemonic: PDH cofactors</text>
+<text x="1020" y="1671" class="note" style="font-size:12px"><tspan font-weight="800" fill="#b03a2e">T</tspan>ender <tspan font-weight="800" fill="#b03a2e">L</tspan>oving <tspan font-weight="800" fill="#b03a2e">C</tspan>are <tspan font-weight="800" fill="#b03a2e">F</tspan>or <tspan font-weight="800" fill="#b03a2e">N</tspan>ancy</text>
+<text x="1020" y="1688" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">T</tspan>hiamine pyrophosphate (B₁) · <tspan font-weight="800" fill="#b03a2e">L</tspan>ipoic acid ·</text>
+<text x="1020" y="1702" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">C</tspan>oA (B₅) · <tspan font-weight="800" fill="#b03a2e">F</tspan>AD (B₂) · <tspan font-weight="800" fill="#b03a2e">N</tspan>AD⁺ (B₃)</text>
+<text x="1020" y="1720" class="note" style="font-size:11px">Same 5 cofactors for</text>
+<text x="1020" y="1734" class="note" style="font-size:11px">α-KG dehydrogenase</text>
+</g>
+<g class="mnemonic">
+<rect x="482" y="618" width="254" height="93" rx="6" fill="#eef0f4" stroke="#a9adb8" stroke-width="1.2"/>
+<text x="490" y="635" class="notebold" style="font-size:11px">Purine synthesis disorders key findings</text>
+<text x="490" y="651" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Built on R5P</tspan>: Gly, Asp, Gln, CO₂, folate</text>
+<text x="490" y="664" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Sulfa/TMP/MTX</tspan>: ↓ folate → ↓ purines, dTMP</text>
+<text x="490" y="677" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">6-MP</tspan> ⊖ PRPP amidotransferase (ALL, IBD)</text>
+<text x="490" y="690" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Mycophenolate</tspan> ⊖ IMP DH (transplant)</text>
+<text x="490" y="703" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">PRPP synthetase overactivity</tspan> → gout</text>
+</g>
+<g class="mnemonic">
+<rect x="830" y="804" width="152" height="180.5" rx="6" fill="#f1f3f8" stroke="#a9b0c4" stroke-width="1.2"/>
+<text x="839" y="821" class="notebold" style="font-size:10.8px">Purine salvage disorders</text>
+<text x="839" y="835" class="notebold" style="font-size:10.8px">key findings</text>
+<rect x="839" y="842.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="848" y="854" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">3</text><text x="861" y="854" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">Lesch-Nyhan</tspan> (XR):</text>
+<text x="861" y="868.5" class="note" style="font-size:10px">↓ HGPRT → ↑ uric acid,</text>
+<text x="839" y="883" class="note" style="font-size:10px">gout, self-mutilation, ID</text>
+<rect x="839" y="890.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="848" y="902" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">4</text><text x="861" y="902" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">ADA deficiency</tspan> (AR):</text>
+<text x="861" y="916.5" class="note" style="font-size:10px">↑ dATP ⊖ RNR → <tspan font-weight="800" fill="#b03a2e">SCID</tspan></text>
+<text x="839" y="931" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Gout Rx</tspan>: allopurinol,</text>
+<text x="839" y="945.5" class="note" style="font-size:10px">febuxostat (⊖ XO)</text>
+<text x="839" y="960" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Rasburicase</tspan>: TLS (urate →</text>
+<text x="839" y="974.5" class="note" style="font-size:10px">allantoin)</text>
+</g>
+<g class="mnemonic">
+<rect x="482" y="476" width="164" height="138" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="490" y="494" class="notebold">Mnemonics</text>
+<text x="490" y="511" class="note" style="font-size:11.4px"><tspan font-weight="800" fill="#b03a2e">PUR</tspan>e <tspan font-weight="800" fill="#b03a2e">A</tspan>s <tspan font-weight="800" fill="#b03a2e">G</tspan>old → purines</text>
+<text x="490" y="526" class="note" style="font-size:11.4px">A, G (2 rings)</text>
+<text x="490" y="544" class="note" style="font-size:11.4px"><tspan font-weight="800" fill="#b03a2e">CUT</tspan> the <tspan font-weight="800" fill="#b03a2e">PY</tspan> → pyrimidines</text>
+<text x="490" y="559" class="note" style="font-size:11.4px">C, U, T (1 ring)</text>
+<text x="490" y="577" class="note" style="font-size:11.4px">Purines: built on PRPP</text>
+<text x="490" y="591" class="note" style="font-size:11.4px">Pyrimidines: ring first,</text>
+<text x="490" y="605" class="note" style="font-size:11.4px">then PRPP added</text>
+</g>
+<g class="mnemonic">
+<rect x="1432" y="1215" width="232" height="112" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="1440" y="1232" class="notebold" style="font-size:12px">Mnemonic: <tspan fill="#b03a2e" font-weight="800">Be APT</tspan> (B₁ / TPP)</text>
+<text x="1440" y="1248" class="note" style="font-size:11px">Thiamine pyrophosphate is a cofactor for:</text>
+<text x="1440" y="1265" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">B</tspan>ranched-chain α-ketoacid DH</text>
+<text x="1440" y="1280" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">α</tspan>-KG DH — TCA</text>
+<text x="1440" y="1295" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">P</tspan>yruvate DH — glycolysis → TCA</text>
+<text x="1440" y="1310" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">T</tspan>ransketolase — HMP shunt</text>
+</g>
+<g class="mnemonic">
+<rect x="480" y="273" width="322" height="124" rx="6" fill="#f6f9ef" stroke="#9fb37a" stroke-width="1.2"/>
+<text x="489" y="290" class="notebold" style="font-size:11.4px">HMP shunt disorders key findings</text>
+<rect x="489" y="295.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="498" y="307" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">2</text><text x="511" y="307" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">G6PD deficiency</tspan>: XR; most common enzyme deficiency</text>
+<text x="489" y="320.5" class="note" style="font-size:10px">↓ <tspan text-decoration="underline">NADPH</tspan> → ↓ GSH → oxidative hemolysis; ↑ in malaria regions</text>
+<text x="489" y="334" class="note" style="font-size:10px">Triggers: infection, fava beans, sulfa, primaquine, nitrofurantoin</text>
+<text x="489" y="347.5" class="note" style="font-size:10px">Heinz bodies · bite cells: “<tspan font-weight="800" fill="#b03a2e">Bite</tspan> into some <tspan font-weight="800" fill="#b03a2e">Heinz</tspan> ketchup”</text>
+<text x="489" y="361" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e"><tspan text-decoration="underline">NADPH</tspan></tspan>: regenerates GSH; G6PD is RBCs’ only source</text>
+<text x="489" y="374.5" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Glutathione reductase</tspan> (FAD, B₂): GSSG → 2 GSH using <tspan text-decoration="underline">NADPH</tspan></text>
+<text x="489" y="388" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Glutathione peroxidase</tspan> (selenium): H₂O₂ → H₂O; protects RBCs</text>
+</g>
+<g class="mnemonic">
+<rect x="1342" y="43" width="298" height="71" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="1350" y="58" class="notebold" style="font-size:12px">Mnemonic: Glycogen Storage Disease</text>
+<text x="1350" y="74" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">V</tspan>ice <tspan font-weight="800" fill="#b03a2e">P</tspan>resident <tspan font-weight="800" fill="#b03a2e">C</tspan>an&#x27;t <tspan font-weight="800" fill="#b03a2e">A</tspan>ccept <tspan font-weight="800" fill="#b03a2e">M</tspan>oney → types I–V</text>
+<text x="1350" y="89" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">ABCD</tspan>: Andersen = Branching, Cori = Debranching</text>
+<text x="1350" y="105" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">Pompe</tspan> trashes the <tspan font-weight="800" fill="#b03a2e">pump</tspan> · <tspan font-weight="800" fill="#b03a2e">McArdle</tspan> = <tspan font-weight="800" fill="#b03a2e">muscle</tspan></text>
+</g>
+<g class="mnemonic">
+<rect x="1700" y="3090" width="580" height="88" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="1710" y="3108" class="notebold">Mnemonics</text>
+<text x="1710" y="3128" class="note" style="font-size:12.6px"><tspan font-weight="800" fill="#b03a2e">TA</tspan>y-Sax → Hexosaminidase <tspan font-weight="800" fill="#b03a2e">A</tspan></text>
+<text x="1710" y="3148" class="note" style="font-size:12.6px"><tspan font-weight="800" fill="#b03a2e">Hunter</tspan>s see clearly (no corneal clouding) and aggressively</text>
+<text x="1710" y="3166" class="note" style="font-size:12.6px">aim for the <tspan font-weight="800" fill="#b03a2e">X</tspan> (X-linked recessive)</text>
+</g>
+<g class="mnemonic">
+<rect x="18" y="1357" width="250" height="93" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="26" y="1372" class="notebold" style="font-size:12px">Mnemonic: Intermediates of Urea Cycle</text>
+<text x="26" y="1387" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">O</tspan>rdinarily, <tspan font-weight="800" fill="#b03a2e">C</tspan>areless <tspan font-weight="800" fill="#b03a2e">C</tspan>rappers <tspan font-weight="800" fill="#b03a2e">A</tspan>re <tspan font-weight="800" fill="#b03a2e">A</tspan>lso</text>
+<text x="26" y="1401" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">F</tspan>rivolous <tspan font-weight="800" fill="#b03a2e">A</tspan>bout <tspan font-weight="800" fill="#b03a2e">U</tspan>rination</text>
+<text x="26" y="1416" class="note" style="font-size:10.5px">Ornithine · Carbamoyl phosphate · Citrulline ·</text>
+<text x="26" y="1428.5" class="note" style="font-size:10.5px">Aspartate · Argininosuccinate · Fumarate ·</text>
+<text x="26" y="1441" class="note" style="font-size:10.5px">Arginine · Urea</text>
+</g>
+<g class="mnemonic">
+<rect x="1110" y="3068" width="564" height="272" rx="6" fill="#f7f2ea" stroke="#c9b99f" stroke-width="1.2"/>
+<text x="1118" y="3085" class="notebold" style="font-size:12px">Lysosomal storage disorders key findings</text>
+<text x="1118" y="3108" class="notebold" style="font-size:11px">Sphingolipidoses — all AR except <tspan fill="#3f5f6e">Fabry</tspan> (XR); <tspan fill="#3f5f6e">Tay-Sachs</tspan>, <tspan fill="#3f5f6e">Niemann-Pick</tspan>, <tspan fill="#3f5f6e">Gaucher</tspan> ↑ in Ashkenazi Jews</text>
+<rect x="1118" y="3116.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1127" y="3128" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">40</text><text x="1140" y="3128" class="note" style="font-size:11px"><tspan font-weight="700" fill="#3f5f6e">Tay-Sachs</tspan>: neurodegeneration, cherry-red macula, onion-skin lysosomes, no HSM</text>
+<rect x="1118" y="3135.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1127" y="3147" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">41</text><text x="1140" y="3147" class="note" style="font-size:11px"><tspan font-weight="700" fill="#3f5f6e">Fabry</tspan>: neuropathy, angiokeratomas, hypohidrosis → renal failure, CVD</text>
+<text x="1130" y="3166" class="drug" style="font-size:11px">↳ treat with recombinant α-galactosidase</text>
+<rect x="1118" y="3173.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1127" y="3185" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">42</text><text x="1140" y="3185" class="note" style="font-size:11px"><tspan font-weight="700" fill="#3f5f6e">Metachromatic leukodystrophy</tspan>: central &amp; peripheral demyelination, ataxia</text>
+<rect x="1118" y="3192.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1127" y="3204" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">43</text><text x="1140" y="3204" class="note" style="font-size:11px"><tspan font-weight="700" fill="#3f5f6e">Krabbe</tspan>: neuropathy, optic atrophy, globoid cells (↑ psychosine)</text>
+<rect x="1118" y="3211.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1127" y="3223" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">44</text><text x="1140" y="3223" class="note" style="font-size:11px"><tspan font-weight="700" fill="#3f5f6e">Gaucher (most common)</tspan>: HSM, pancytopenia, AVN of femur, crumpled-paper cells</text>
+<text x="1130" y="3242" class="drug" style="font-size:11px">↳ treat with recombinant glucocerebrosidase</text>
+<rect x="1118" y="3249.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1127" y="3261" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">45</text><text x="1140" y="3261" class="note" style="font-size:11px"><tspan font-weight="700" fill="#3f5f6e">Niemann-Pick</tspan>: neurodegeneration, HSM, foam cells, cherry-red macula</text>
+<text x="1118" y="3286" class="notebold" style="font-size:11px">Mucopolysaccharidoses — ↑ heparan &amp; dermatan sulfate; <tspan fill="#3f5f6e">Hurler</tspan> AR, <tspan fill="#3f5f6e">Hunter</tspan> XR</text>
+<rect x="1118" y="3294.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1127" y="3306" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">46</text><text x="1140" y="3306" class="note" style="font-size:11px"><tspan font-weight="700" fill="#3f5f6e">Hurler</tspan>: developmental delay, hirsutism, airway obstruction, corneal clouding</text>
+<rect x="1118" y="3313.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1127" y="3325" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">47</text><text x="1140" y="3325" class="note" style="font-size:11px"><tspan font-weight="700" fill="#3f5f6e">Hunter</tspan>: mild Hurler + aggressive behaviour, no corneal clouding</text>
+</g>
+<g class="mnemonic">
+<rect x="690" y="2150" width="292" height="313.5" rx="6" fill="#eef4e4" stroke="#9fb37a" stroke-width="1.2"/>
+<text x="698" y="2167" class="notebold" style="font-size:12px">Amino acid disorders key findings</text>
+<rect x="698" y="2170.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="707" y="2182" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">6</text><text x="720" y="2182" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">PKU</tspan>: ↓ phenylalanine hydroxylase (PAH);</text>
+<text x="720" y="2194.5" class="note" style="font-size:10px">Tyr becomes essential; ↑ phenyl ketones</text>
+<text x="698" y="2207" class="note" style="font-size:10px">in urine; musty odor, ID, fair skin;</text>
+<text x="698" y="2219.5" class="note" style="font-size:10px">Rx ↓ Phe, ↑ Tyr</text>
+<text x="698" y="2234.5" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">BH₄ deficiency</tspan>: BH₄ is PAH cofactor → ↑ Phe;</text>
+<text x="698" y="2247" class="note" style="font-size:10px">untreated → death in infancy</text>
+<text x="698" y="2262" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">Phe embryopathy</tspan>: untreated maternal PKU → FGR,</text>
+<text x="698" y="2274.5" class="note" style="font-size:10px">microcephaly, ID, CHD; prevent by diet</text>
+<rect x="698" y="2278" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="707" y="2289.5" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">7</text><text x="720" y="2289.5" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">Alkaptonuria</tspan>: urine turns black on air exposure,</text>
+<text x="720" y="2302" class="note" style="font-size:10px">ochronosis, arthralgia</text>
+<rect x="698" y="2305.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="707" y="2317" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">8</text><text x="720" y="2317" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">Albinism</tspan>: ↓ melanin → pale skin/hair,</text>
+<text x="720" y="2329.5" class="note" style="font-size:10px">↑ skin cancer risk</text>
+<rect x="698" y="2333" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="707" y="2344.5" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">32</text><text x="720" y="2344.5" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">Tyrosinemia I</tspan>: liver failure, renal tubulopathy,</text>
+<text x="720" y="2357" class="note" style="font-size:10px">cabbage odor; Rx nitisinone</text>
+<rect x="698" y="2360.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="707" y="2372" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">31</text><text x="720" y="2372" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">Tyrosinemia II</tspan>: corneal &amp; palmoplantar lesions,</text>
+<text x="720" y="2384.5" class="note" style="font-size:10px">intellectual disability</text>
+<text x="698" y="2399.5" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">Hartnup</tspan>: ↓ neutral AA (Trp) uptake → pellagra-</text>
+<text x="698" y="2412" class="note" style="font-size:10px">like rash, ataxia; Rx niacin</text>
+<text x="698" y="2427" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">ALT &amp; AST</tspan>: liver transaminases (B₆); also high</text>
+<text x="698" y="2439.5" class="note" style="font-size:10px">in skeletal and cardiac muscle</text>
+<text x="698" y="2454.5" class="note" style="font-size:10px">Deamination: glutamate NH₃ → liver urea → kidney</text>
+</g>
+<text x="245" y="674" text-anchor="middle" class="drug">⊖ MTX (hu<tspan font-weight="800">m</tspan>ans), trimethoprim (bac<tspan font-weight="800">t</tspan>eria),</text>
+<text x="245" y="690" text-anchor="middle" class="drug">pyrimethamine (<tspan font-weight="800">p</tspan>rotozoa)</text>
+<g class="mnemonic">
+<rect x="343" y="42" width="110" height="100" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="350" y="58" class="notebold" style="font-size:11px">Mnemonic: <tspan fill="#b03a2e" font-weight="800">CPS</tspan></text>
+<text x="350" y="74" class="note" style="font-size:9.4px">CPS<tspan font-weight="800" fill="#b03a2e">1</tspan> = m<tspan font-weight="800" fill="#b03a2e">1</tspan>tochondria</text>
+<text x="350" y="87" class="note" style="font-size:9.8px">urea cycle, liver</text>
+<text x="350" y="104" class="note" style="font-size:9.8px">CPS<tspan font-weight="800" fill="#b03a2e">2</tspan> = cy<tspan font-weight="800" fill="#b03a2e">two</tspan>sol</text>
+<text x="350" y="117" class="note" style="font-size:9.4px">pyrimidine synthesis,</text>
+<text x="350" y="130" class="note" style="font-size:9.8px">most cells</text>
+</g>
+<g class="mnemonic">
+<rect x="22" y="260" width="120" height="310" rx="6" fill="#fcf1ef" stroke="#d4a39b" stroke-width="1.2"/>
+<text x="29" y="275" class="notebold" style="font-size:10.4px">Pyrimidine synthesis</text>
+<text x="29" y="288" class="notebold" style="font-size:10.4px">disorders</text>
+<text x="29" y="301" class="notebold" style="font-size:10.4px">key findings</text>
+<rect x="29" y="306.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="38" y="318" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">1</text><text x="51" y="318" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">Orotic aciduria</tspan></text>
+<text x="29" y="332" class="note" style="font-size:10px">AR; ↑ urine orotic acid</text>
+<text x="29" y="346" class="note" style="font-size:10px">Megaloblastic anemia</text>
+<text x="29" y="360" class="note" style="font-size:10px">(B₁₂/folate-resistant)</text>
+<text x="29" y="374" class="note" style="font-size:10px">FTT · normal NH₃</text>
+<text x="29" y="388" class="note" style="font-size:10px">Rx: uridine</text>
+<text x="29" y="402" class="note" style="font-size:10px">vs OTC def: ↑ NH₃</text>
+<text x="29" y="420" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Leflunomide</tspan>: RA</text>
+<text x="29" y="434" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Hydroxyurea</tspan>: sickle</text>
+<text x="29" y="448" class="note" style="font-size:10px">cell (↑ HbF), CML</text>
+<text x="29" y="462" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">5-FU</tspan>: colorectal</text>
+<text x="29" y="476" class="note" style="font-size:10px">cancer; topical BCC</text>
+<text x="29" y="490" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">MTX</tspan>: cancer,</text>
+<text x="29" y="504" class="note" style="font-size:10px">RA, psoriasis, ectopic</text>
+<text x="29" y="518" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Trimethoprim</tspan>: UTI,</text>
+<text x="29" y="532" class="note" style="font-size:10px">PCP (+ SMX)</text>
+<text x="29" y="546" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Pyrimethamine</tspan>:</text>
+<text x="29" y="560" class="note" style="font-size:10px">toxoplasmosis</text>
+</g>
+<g class="mnemonic">
+<rect x="1012" y="1531" width="240" height="97" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="1020" y="1547" class="notebold" style="font-size:12px">Mnemonic: TCA Cycle Intermediates</text>
+<text x="1020" y="1563" class="note" style="font-size:12px"><tspan font-weight="800" fill="#b03a2e">C</tspan>itrate <tspan font-weight="800" fill="#b03a2e">I</tspan>s <tspan font-weight="800" fill="#b03a2e">K</tspan>rebs&#x27; <tspan font-weight="800" fill="#b03a2e">S</tspan>tarting</text>
+<text x="1020" y="1578" class="note" style="font-size:12px"><tspan font-weight="800" fill="#b03a2e">S</tspan>ubstrate <tspan font-weight="800" fill="#b03a2e">F</tspan>or <tspan font-weight="800" fill="#b03a2e">M</tspan>aking <tspan font-weight="800" fill="#b03a2e">O</tspan>xaloacetate</text>
+<text x="1020" y="1593" class="note" style="font-size:10.5px">Citrate · Isocitrate · α-KG ·</text>
+<text x="1020" y="1606" class="note" style="font-size:10.5px">Succinyl-CoA · Succinate · Fumarate ·</text>
+<text x="1020" y="1619" class="note" style="font-size:10.5px">Malate · OAA</text>
+</g>
+<g class="mnemonic">
+<rect x="830" y="995" width="152" height="106" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="838" y="1012" class="notebold" style="font-size:11.4px">Mnemonic: <tspan fill="#b03a2e" font-weight="800">HGPRT</tspan></text>
+<text x="838" y="1028" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">H</tspan>yperuricemia</text>
+<text x="838" y="1041" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">G</tspan>out</text>
+<text x="838" y="1054" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">P</tspan>issed off (aggression,</text>
+<text x="845" y="1067" class="note" style="font-size:10px">self-mutilation)</text>
+<text x="838" y="1080" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">R</tspan>ed/orange urine crystals</text>
+<text x="838" y="1093" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">T</tspan>ense muscles (dystonia)</text>
+</g>
+<g class="mnemonic">
+<rect x="1974" y="1826" width="306" height="213" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="1982" y="1843" class="notebold" style="font-size:11.5px">Mnemonic: <tspan fill="#b03a2e" font-weight="800">VOMIT</tspan> – precursors of propionyl-CoA</text>
+<text x="1982" y="1856" class="note" style="font-size:10.5px"><tspan font-weight="800" fill="#b03a2e">V</tspan>aline · <tspan font-weight="800" fill="#b03a2e">O</tspan>dd-chain FAs · <tspan font-weight="800" fill="#b03a2e">M</tspan>ethionine ·</text>
+<text x="1982" y="1869" class="note" style="font-size:10.5px"><tspan font-weight="800" fill="#b03a2e">I</tspan>soleucine · <tspan font-weight="800" fill="#b03a2e">T</tspan>hreonine → propionyl-CoA</text>
+<text x="1982" y="1884" class="notebold" style="font-size:11.5px">Mnemonic: <tspan fill="#b03a2e" font-weight="800"></tspan>Branched-chain AA build up – MSUD</text>
+<text x="1982" y="1897" class="note" style="font-size:10.5px"><tspan font-weight="800" fill="#b03a2e">I</tspan> <tspan font-weight="800" fill="#b03a2e">L</tspan>ove <tspan font-weight="800" fill="#b03a2e">V</tspan>ermont maple syrup from maple trees</text>
+<text x="1982" y="1910" class="note" style="font-size:10.5px">(with <tspan font-weight="800" fill="#b03a2e">B₁</tspan>ranches)</text>
+<text x="1982" y="1923" class="note" style="font-size:10.5px">= <tspan font-weight="800" fill="#b03a2e">I</tspan>soleucine, <tspan font-weight="800" fill="#b03a2e">L</tspan>eucine, <tspan font-weight="800" fill="#b03a2e">V</tspan>aline; <tspan font-weight="800" fill="#b03a2e">B₁</tspan> (thiamine) cofactor</text>
+<text x="1982" y="1938" class="notebold" style="font-size:11.5px">Mnemonic: <tspan fill="#b03a2e" font-weight="800">HOMOCY</tspan>stinuria</text>
+<text x="1982" y="1951" class="note" style="font-size:10.5px"><tspan font-weight="800" fill="#b03a2e">H</tspan>omocysteine ↑↑ in urine · <tspan font-weight="800" fill="#b03a2e">O</tspan>steoporosis ·</text>
+<text x="1982" y="1964" class="note" style="font-size:10.5px"><tspan font-weight="800" fill="#b03a2e">M</tspan>arfanoid habitus · <tspan font-weight="800" fill="#b03a2e">O</tspan>cular: lens down &amp; in</text>
+<text x="1982" y="1977" class="note" style="font-size:10.5px"><tspan font-weight="800" fill="#b03a2e">C</tspan>ardiovascular (thrombosis → stroke, MI)</text>
+<text x="1982" y="1990" class="note" style="font-size:10.5px">k<tspan font-weight="800" fill="#b03a2e">Y</tspan>phosis · ID · vs Mar<tspan font-weight="800" fill="#b03a2e">fan</tspan>: lens up &amp; <tspan font-weight="800" fill="#b03a2e">fan</tspan>s out</text>
+<text x="1982" y="2005" class="notebold" style="font-size:11.5px">Mnemonic: <tspan fill="#b03a2e" font-weight="800">COLA</tspan> — cystinuria</text>
+<text x="1982" y="2018" class="note" style="font-size:10.5px">↓ reabsorption of <tspan font-weight="800" fill="#b03a2e">C</tspan>ystine, <tspan font-weight="800" fill="#b03a2e">O</tspan>rnithine, <tspan font-weight="800" fill="#b03a2e">L</tspan>ysine, <tspan font-weight="800" fill="#b03a2e">A</tspan>rginine</text>
+<text x="1982" y="2031" class="note" style="font-size:10.5px">→ hexagonal stones; Rx alkalinize, penicillamine</text>
+</g>
+<path d="M1339.2,2228.7 L1330,2228.7" class="edge join" data-a="oddc" data-b="prop"/>
+<circle cx="1330" cy="2228.7" r="2.6" fill="#3b3b3b"/>
+<g class="mnemonic">
+<rect x="1338" y="919" width="266" height="147" rx="6" fill="#fffaf0" stroke="#d9a441" stroke-dasharray="4 3"/>
+<text x="1346" y="936" class="notebold">Mnemonics: <tspan fill="#b03a2e" font-weight="800">FAB GUT</tspan></text>
+<text x="1346" y="951" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">F</tspan>a<tspan font-weight="800" fill="#b03a2e">B</tspan>ian the <tspan font-weight="800" fill="#b03a2e">P</tspan>easant (FBP) works</text>
+<text x="1346" y="965" class="note" style="font-size:11px">hard when starving → FBPase-2 (fasting)</text>
+<text x="1346" y="982" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">P</tspan>rince <tspan font-weight="800" fill="#b03a2e">F</tspan>rederic<tspan font-weight="800" fill="#b03a2e">K</tspan> (PFK) works only</text>
+<text x="1346" y="996" class="note" style="font-size:11px">when fed → PFK-2 (fed state)</text>
+<text x="1346" y="1013" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">F</tspan>ructose → <tspan font-weight="800" fill="#b03a2e">A</tspan>ldolase <tspan font-weight="800" fill="#b03a2e">B</tspan> (FAB)</text>
+<text x="1346" y="1027" class="note" style="font-size:11px">= hereditary fructose intolerance</text>
+<text x="1346" y="1044" class="note" style="font-size:11px"><tspan font-weight="800" fill="#b03a2e">G</tspan>alactose → <tspan font-weight="800" fill="#b03a2e">U</tspan>ridyl<tspan font-weight="800" fill="#b03a2e">T</tspan>ransferase (GUT)</text>
+<text x="1346" y="1058" class="note" style="font-size:11px">= classic galactosemia</text>
+</g>
+<g class="mnemonic">
+<rect x="18" y="2656" width="2264" height="76" rx="6" fill="#fbf3f7" stroke="#c9a3b8" stroke-width="1.2"/>
+<text x="28" y="2673" class="notebold" style="font-size:12px">Heme synthesis disorders key findings</text>
+<rect x="28.0" y="2681.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="37.0" y="2693.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">33</text><text x="50.0" y="2693" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">X-linked sideroblastic anemia</tspan> (↓ ALA synthase):</text>
+<text x="50.0" y="2707.5" class="note" style="font-size:10.5px">ringed sideroblasts, microcytic anemia; Rx <tspan font-weight="800" fill="#b03a2e">B₆</tspan></text>
+<rect x="476.8" y="2681.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="485.8" y="2693.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">34</text><text x="498.8" y="2693" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">Lead poisoning</tspan> (↓ ALA dehydratase, ferrochelatase):</text>
+<text x="498.8" y="2707.5" class="note" style="font-size:10.5px">↑ ALA, ↑ protoporphyrin; basophilic stippling,</text>
+<text x="498.8" y="2722.0" class="note" style="font-size:10.5px">abdominal pain, neuropathy; Rx <tspan font-weight="800" fill="#b03a2e">chelation</tspan></text>
+<rect x="925.6" y="2681.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="934.6" y="2693.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">35</text><text x="947.6" y="2693" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">Acute intermittent porphyria</tspan> (↓ PBG deaminase):</text>
+<text x="947.6" y="2707.5" class="note" style="font-size:10.5px">↑ PBG, ↑ ALA; neurovisceral attacks, port-wine urine;</text>
+<text x="947.6" y="2722.0" class="note" style="font-size:10.5px">Rx <tspan font-weight="800" fill="#b03a2e">hemin + glucose</tspan> (⊖ ALA synthase)</text>
+<rect x="1374.4" y="2681.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1383.4" y="2693.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">36</text><text x="1396.4" y="2693" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">Porphyria cutanea tarda</tspan> (↓ UROD):</text>
+<text x="1396.4" y="2707.5" class="note" style="font-size:10.5px">↑ uroporphyrin; blistering cutaneous</text>
+<text x="1396.4" y="2722.0" class="note" style="font-size:10.5px">photosensitivity, tea-coloured urine</text>
+<text x="1823.2" y="2693" class="note" style="font-size:10.5px">Heme → hemoglobin, myoglobin, cytochromes (CYP450)</text>
+<text x="1823.2" y="2707.5" class="note" style="font-size:10.5px">Heme ⊖ ALA synthase (feedback inhibition)</text>
+<text x="1823.2" y="2722.0" class="note" style="font-size:10.5px">Neurovisceral: AIP · Cutaneous: PCT</text>
+</g>
+<g class="enz">
+<text x="1343" y="1301" text-anchor="start" style="font-size:11px;font-weight:700;fill:#1f6f8b">NADH</text>
+<text x="1343" y="1421" text-anchor="start" style="font-size:11px;font-weight:700;fill:#1f6f8b">NADH</text>
+<text x="1243" y="1503" text-anchor="start" style="font-size:11px;font-weight:700;fill:#1f6f8b">GTP</text>
+<text x="1111" y="1513" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#1f6f8b">FADH₂</text>
+<text x="1037" y="1301" text-anchor="end" style="font-size:11px;font-weight:700;fill:#1f6f8b">NADH</text>
+</g>
+<g class="mnemonic">
+<rect x="1682" y="16" width="452" height="71" rx="6" fill="#f3f6fa" stroke="#9fb0c4" stroke-width="1.2"/>
+<text x="1691" y="31" class="notebold" style="font-size:11px">Galactose metabolism disorders key findings</text>
+<rect x="1691" y="37.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1700" y="49.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">15</text><text x="1713" y="49" class="note" style="font-size:9.8px"><tspan font-weight="700" fill="#3f5f6e">Classic galactosemia</tspan> (AR, ↓ GALT): jaundice, hepatomegaly, ID, cataracts,</text>
+<text x="1713" y="62.5" class="note" style="font-size:9.8px">E. coli sepsis; Rx exclude galactose &amp; lactose</text>
+<rect x="1691" y="68.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1700" y="80.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">14</text><text x="1713" y="80" class="note" style="font-size:9.8px"><tspan font-weight="700" fill="#3f5f6e">Galactokinase deficiency</tspan> (AR): galactitol → infantile cataracts; milder</text>
+</g>
+<text x="482" y="51" text-anchor="start" style="font-size:12px;font-weight:600;fill:#1a1a1a">(in cytoplasm)</text>
+<text x="1398" y="1154" text-anchor="end" style="font-size:12px;font-weight:600;fill:#1a1a1a">(in mitochondria)</text>
+<g class="mnemonic">
+<rect x="1430" y="1336" width="410" height="69.5" rx="6" fill="#f6f9ef" stroke="#9fb37a" stroke-width="1.2"/>
+<text x="1439" y="1352" class="notebold" style="font-size:11px">Ketone & cholesterol disorders key findings</text>
+<text x="1439" y="1367.5" class="note" style="font-size:9.6px"><tspan font-weight="800" fill="#b03a2e">↑ Ketones</tspan>: fasting, <tspan font-weight="700" fill="#3f5f6e">DKA</tspan>, alcoholism</text>
+<text x="1439" y="1382.0" class="note" style="font-size:9.6px">Used by brain &amp; muscle, not RBCs</text>
+<text x="1439" y="1396.5" class="note" style="font-size:9.6px">Liver lacks thiophorase (can’t use)</text>
+<text x="1644" y="1367.5" class="note" style="font-size:9.6px">Dipstick: acetoacetate, not β-HB</text>
+<text x="1644" y="1382.0" class="note" style="font-size:9.6px">Acetone → fruity breath</text>
+<text x="1644" y="1396.5" class="note" style="font-size:9.6px"><tspan font-weight="800" fill="#b03a2e">Statins</tspan> ⊖ HMG-CoA reductase</text>
+</g>
+<g class="mnemonic">
+<rect x="1442" y="1728" width="284" height="69.5" rx="6" fill="#fbf2e4" stroke="#d2b46c" stroke-width="1.2"/>
+<text x="1451" y="1744" class="notebold" style="font-size:11px">Cori & Cahill cycle disorders key findings</text>
+<text x="1451" y="1759.5" class="note" style="font-size:9.2px"><tspan font-weight="800" fill="#b03a2e">Cori</tspan>: lactate → liver gluconeogenesis (−4 ATP)</text>
+<text x="1451" y="1774.0" class="note" style="font-size:9.2px"><tspan font-weight="800" fill="#b03a2e">Cahill</tspan>: alanine carries muscle NH₃ → liver urea</text>
+<text x="1451" y="1788.5" class="note" style="font-size:9.2px"><tspan font-weight="700" fill="#3f5f6e">Lactic acidosis</tspan>: ↓ liver clearance, metformin</text>
+</g>
+<g class="mnemonic">
+<rect x="18" y="2953" width="1030" height="74.0" rx="6" fill="#f5f7ec" stroke="#a9b38a" stroke-width="1.2"/>
+<text x="27" y="2969" class="notebold" style="font-size:11px">Ethanol metabolism disorders key findings</text>
+<rect x="27" y="2977.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="36" y="2989.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">39</text><text x="49" y="2989" class="note" style="font-size:10px"><tspan font-weight="700" fill="#3f5f6e">ALDH2 deficiency</tspan> (Asian flush): ↑ acetaldehyde → flushing</text>
+<text x="27" y="3003.5" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Disulfiram</tspan> ⊖ ALDH → acetaldehyde build-up → aversion to alcohol</text>
+<text x="27" y="3018.0" class="note" style="font-size:10px"><tspan font-weight="800" fill="#b03a2e">Fomepizole</tspan> ⊖ ADH; also treats methanol / ethylene glycol poisoning</text>
+<text x="557" y="2984.5" class="note" style="font-size:10px">↑ NADH also ⊖ TCA cycle → acetyl-CoA diverted to ketones &amp; FAs</text>
+<text x="557" y="2999.0" class="note" style="font-size:10px">①②④A each convert NADH → NAD⁺</text>
+<text x="557" y="3013.5" class="note" style="font-size:10px">Solid = stimulated · dashed = inhibited</text>
+</g>
+<g class="mnemonic">
+<rect x="1974" y="2128" width="306" height="344.0" rx="6" fill="#f3f1ec" stroke="#b9b2a4" stroke-width="1.2"/>
+<text x="1983" y="2145" class="notebold" style="font-size:12px">Organic acidemia disorders key findings</text>
+<text x="1983" y="2162" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">Organic acidemias</tspan> (infancy): poor feeding, vomiting,</text>
+<text x="1983" y="2176.5" class="note" style="font-size:10.5px">hypotonia, ↑ anion gap acidosis, hepatomegaly,</text>
+<text x="1983" y="2191.0" class="note" style="font-size:10.5px">seizures; ↓ glucose, ↑ NH₃; Rx ↓ protein diet</text>
+<rect x="1983" y="2198.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1992" y="2210.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">27</text><text x="2005" y="2210.0" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">Propionic acidemia</tspan>: ↓ propionyl-CoA carboxylase</text>
+<rect x="1983" y="2217.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1992" y="2229.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">28</text><text x="2005" y="2229.0" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">Methylmalonic acidemia</tspan>: ↓ MM-CoA mutase or B₁₂</text>
+<rect x="1983" y="2236.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1992" y="2248.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">20</text><text x="2005" y="2248.0" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">MSUD</tspan>: ↓ BCKDH → ↑ Ile, Leu, Val; vomiting,</text>
+<text x="1983" y="2262.5" class="note" style="font-size:10.5px">poor feeding, maple-syrup/burnt-sugar urine,</text>
+<text x="1983" y="2277.0" class="note" style="font-size:10.5px">neuro decline; avoid BCAAs; B₁ supplement</text>
+<rect x="1983" y="2284.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1992" y="2296.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">21</text><text x="2005" y="2296.0" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">Homocystinuria</tspan>: Rx B₆, B₁₂, folate, betaine;</text>
+<text x="1983" y="2310.5" class="note" style="font-size:10.5px">↓ Met, ↑ Cys; <tspan font-weight="800" fill="#b03a2e">pleiotropy</tspan>: lens subluxation</text>
+<text x="1983" y="2325.0" class="note" style="font-size:10.5px">(down &amp; in), marfanoid, osteoporosis, thrombosis, ID</text>
+<text x="1983" y="2345.5" class="note" style="font-size:10.5px"><tspan font-weight="800" fill="#b03a2e">B₁₂ (cobalamin)</tspan>: cofactor for methionine synthase</text>
+<text x="1983" y="2360.0" class="note" style="font-size:10.5px">&amp; MM-CoA mutase; <tspan font-weight="800" fill="#b03a2e">folate (B₉)</tspan>: methionine synthase</text>
+<text x="1983" y="2379.5" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">B₁₂ deficiency</tspan>: ↑ homocysteine + <tspan font-weight="800" fill="#b03a2e">↑ MMA</tspan>;</text>
+<text x="1983" y="2394.0" class="note" style="font-size:10.5px">megaloblastic anemia, hypersegmented PMNs,</text>
+<text x="1983" y="2408.5" class="note" style="font-size:10.5px">neuro signs (subacute combined degeneration)</text>
+<text x="1983" y="2428.0" class="note" style="font-size:10.5px"><tspan font-weight="700" fill="#3f5f6e">Folate (B₉) deficiency</tspan>: ↑ homocysteine, <tspan font-weight="800" fill="#b03a2e">normal MMA</tspan>;</text>
+<text x="1983" y="2442.5" class="note" style="font-size:10.5px">megaloblastic anemia, no neuro signs</text>
+<text x="1983" y="2462.0" class="note" style="font-size:10.5px">Folate masks B₁₂-def. anemia, not the neuro signs</text>
+</g>
+<g class="mnemonic">
+<rect x="2098" y="168" width="186" height="208.5" rx="6" fill="#f3f6fa" stroke="#9fb0c4" stroke-width="1.2"/>
+<text x="2107" y="185" class="notebold" style="font-size:11.4px">Glycogen storage disorders</text>
+<text x="2107" y="199" class="notebold" style="font-size:11.4px">key findings</text>
+<rect x="2107" y="206.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="2116" y="218.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">10</text><text x="2129" y="218" class="note" style="font-size:9.0px"><tspan font-weight="700" fill="#3f5f6e">Von Gierke</tspan> (G6Pase): ↓ glucose,</text>
+<text x="2129" y="232.5" class="note" style="font-size:9.0px">↑ lactate, TG, urate; hepatomegaly</text>
+<rect x="2107" y="240.0" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="2116" y="251.5" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">22</text><text x="2129" y="251.5" class="note" style="font-size:9.0px"><tspan font-weight="700" fill="#3f5f6e">Pompe</tspan> (α-1,4-glucosidase):</text>
+<text x="2129" y="266.0" class="note" style="font-size:9.0px">cardiomegaly, hypotonia</text>
+<rect x="2107" y="273.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="2116" y="285.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">24</text><text x="2129" y="285.0" class="note" style="font-size:9.0px"><tspan font-weight="700" fill="#3f5f6e">Cori</tspan> (debranching): milder,</text>
+<text x="2129" y="299.5" class="note" style="font-size:9.0px">normal lactate &amp; gluconeo.</text>
+<rect x="2107" y="307.0" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="2116" y="318.5" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">25</text><text x="2129" y="318.5" class="note" style="font-size:9.0px"><tspan font-weight="700" fill="#3f5f6e">Andersen</tspan> (branching): HSM,</text>
+<text x="2129" y="333.0" class="note" style="font-size:9.0px">cirrhosis, FTT, early death</text>
+<rect x="2107" y="340.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="2116" y="352.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">23</text><text x="2129" y="352.0" class="note" style="font-size:9.0px"><tspan font-weight="700" fill="#3f5f6e">McArdle</tspan> (myophosphorylase):</text>
+<text x="2129" y="366.5" class="note" style="font-size:9.0px">cramps, myoglobinuria, flat lactate</text>
+</g>
+<g class="mnemonic">
+<rect x="20" y="1458" width="530" height="96.5" rx="6" fill="#fcf5e1" stroke="#d2b46c" stroke-width="1.2"/>
+<text x="29" y="1475" class="notebold" style="font-size:11.4px">Urea cycle disorders key findings</text>
+<text x="29" y="1492" class="note" style="font-size:9.4px"><tspan font-weight="800" fill="#b03a2e">↑ NH₃</tspan>: asterixis, slurred speech, somnolence, vomiting, cerebral edema, blurred vision</text>
+<rect x="29" y="1499.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="38" y="1511.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">5</text><text x="51" y="1511" class="note" style="font-size:9.4px"><tspan font-weight="700" fill="#3f5f6e">OTC deficiency</tspan> (XR, most common): ↑ orotic acid, ↓ BUN, no megaloblastic anemia (vs orotic aciduria)</text>
+<rect x="29" y="1518.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="38" y="1530.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">26</text><text x="51" y="1530" class="note" style="font-size:9.4px"><tspan font-weight="700" fill="#3f5f6e">CPS I deficiency</tspan> (AR): ↑ NH₃ without ↑ orotic acid</text>
+<text x="29" y="1544.5" class="note" style="font-size:9.4px"><tspan font-weight="800" fill="#b03a2e">Rx</tspan>: ↓ protein, lactulose, rifaximin, benzoate / phenylbutyrate (bind NH₃), arginine</text>
+</g>
+<g class="mnemonic">
+<rect x="1163" y="969" width="146" height="120" rx="6" fill="#fcf5e1" stroke="#d2b46c" stroke-width="1.2"/>
+<text x="1170" y="984" class="notebold" style="font-size:11px">Glycolysis disorders</text>
+<text x="1170" y="997" class="notebold" style="font-size:11px">key findings</text>
+<rect x="1170" y="1002.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1179" y="1014.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">11</text><text x="1192" y="1014" class="note" style="font-size:9.2px"><tspan font-weight="700" fill="#3f5f6e">PK deficiency</tspan>: hemolysis,</text>
+<text x="1192" y="1028.5" class="note" style="font-size:9.2px">↑ 2,3-BPG, echinocytes</text>
+<rect x="1170" y="1036.0" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1179" y="1047.5" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">12</text><text x="1192" y="1047.5" class="note" style="font-size:9.2px"><tspan font-weight="700" fill="#3f5f6e">PDH deficiency</tspan>: lactic</text>
+<text x="1192" y="1062" class="note" style="font-size:9.2px">acidosis; Rx ketogenic</text>
+<rect x="1170" y="1069.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1179" y="1081.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">9</text><text x="1192" y="1081" class="note" style="font-size:9.2px"><tspan font-weight="700" fill="#3f5f6e">MODY</tspan>: mild ↑ glucose</text>
+</g>
+<g class="enz"><text x="2102" y="625" class="et">β-oxidation</text></g>
+<g class="enz"><text x="1216" y="943" class="et">Ketone bodies</text></g>
+<g class="enz"><text x="1142" y="1030" class="et" text-anchor="end">TCA cycle</text></g>
+<g class="enz"><text x="1392" y="1866" class="et" text-anchor="end">TCA cycle</text></g>
+<g class="enz"><text x="1054" y="171" class="et" text-anchor="end">HMP</text></g>
+<g class="enz"><text x="1054" y="184" class="et" text-anchor="end">shunt</text></g>
+<g class="enz"><text x="1252" y="143" class="et" text-anchor="start">Glycogen</text></g>
+<g class="enz"><text x="1336" y="690" class="et" text-anchor="start">Glycolysis</text></g>
+<g class="enz"><text x="955" y="300" class="et" text-anchor="middle">Glycolysis</text></g>
+<g class="mnemonic">
+<rect x="1262" y="1512" width="130" height="236.5" rx="6" fill="#eef4f8" stroke="#9fb6c4" stroke-width="1.2"/>
+<text x="1270" y="1527" class="notebold" style="font-size:10.8px">TCA cycle disorders</text>
+<text x="1270" y="1540" class="notebold" style="font-size:10.8px">key findings</text>
+<rect x="1270" y="1547.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1279" y="1559.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">12</text><text x="1292" y="1559" class="note" style="font-size:9.2px"><tspan font-weight="700" fill="#3f5f6e">PDH deficiency</tspan></text>
+<text x="1276" y="1573.5" class="note" style="font-size:9.2px">↑ lactate, ↑ alanine;</text>
+<text x="1276" y="1588.0" class="note" style="font-size:9.2px">Rx ketogenic (Lys, Leu)</text>
+<text x="1270" y="1602.5" class="note" style="font-size:9.2px"><tspan font-weight="800" fill="#b03a2e">Arsenite</tspan>: ⊖ lipoic acid</text>
+<text x="1276" y="1617.0" class="note" style="font-size:9.2px">(PDH, α-KG DH)</text>
+<text x="1270" y="1631.5" class="note" style="font-size:9.2px"><tspan font-weight="700" fill="#3f5f6e">B₁ deficiency</tspan>: ↓ PDH,</text>
+<text x="1276" y="1646.0" class="note" style="font-size:9.2px">α-KG DH → ↓ ATP</text>
+<text x="1270" y="1666.0" class="notebold" style="font-size:10px">ATP yield</text>
+<text x="1270" y="1680.5" class="note" style="font-size:9.2px">1 turn ≈ <tspan font-weight="800" fill="#b03a2e">10 ATP</tspan></text>
+<text x="1276" y="1695.0" class="note" style="font-size:9.2px">(3 NADH, 1 FADH₂, 1 GTP)</text>
+<text x="1276" y="1709.5" class="note" style="font-size:9.2px">NADH 2.5 · FADH₂ 1.5</text>
+<text x="1270" y="1724.0" class="note" style="font-size:9.2px">Glucose ≈ <tspan font-weight="800" fill="#b03a2e">30–32 ATP</tspan></text>
+<text x="1270" y="1738.5" class="note" style="font-size:9.2px">Anaerobic: 2 ATP</text>
+</g>
+<g class="enz"><text x="1043" y="906" class="et" text-anchor="start">TCA cycle</text></g>
+<g class="enz"><text x="858" y="364" class="et" text-anchor="start">Purine synthesis</text></g>
+<g class="enz"><text x="892" y="457" class="et" text-anchor="start">Purine salvage</text></g>
+<g class="enz"><text x="413" y="512" class="et" text-anchor="end">Purine</text></g>
+<g class="enz"><text x="413" y="525" class="et" text-anchor="end">salvage</text></g>
+<g class="mnemonic">
+<rect x="1692" y="431" width="590" height="101" rx="6" fill="#f6f4ee" stroke="#b9ab96" stroke-width="1.2"/>
+<text x="1701" y="448" class="notebold" style="font-size:11.4px">Fatty acid metabolism disorders key findings</text>
+<rect x="1701" y="453.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1710" y="465.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">18</text><text x="1723" y="465" class="note" style="font-size:10.2px"><tspan font-weight="700" fill="#3f5f6e">Primary carnitine deficiency</tspan> (AR): LCFAs can’t enter mitochondria → weakness, hypotonia, cardiomyopathy,</text>
+<text x="1723" y="479" class="note" style="font-size:10.2px">hypoketotic hypoglycemia</text>
+<rect x="1701" y="482.5" width="18" height="15" rx="2" fill="#5d7f8f"/><text x="1710" y="494.0" text-anchor="middle" style="font-size:11.4px;font-weight:700;fill:#fff">19</text><text x="1723" y="494" class="note" style="font-size:10.2px"><tspan font-weight="700" fill="#3f5f6e">MCAD deficiency</tspan> (AR): ↓ medium-chain FA oxidation → fasting hypoketotic hypoglycemia, vomiting,</text>
+<text x="1723" y="508" class="note" style="font-size:10.2px">lethargy, seizures, coma, ↑ NH₃, sudden infant death; Rx: avoid fasting</text>
+<text x="1701" y="523" class="note" style="font-size:10.2px"><tspan font-weight="700" fill="#3f5f6e">DKA</tspan> → ↑ TG breakdown (HSL ↑ with glucagon, ↓ insulin)</text>
+</g>
+<path d="M2107,877 L2107,895" stroke="#c0392b" stroke-width="2.6" fill="none"/>
+</svg></div>
+<main>
+  <section>
+    <h2>Inherited disorders (click to locate)</h2>
+    <div class="dzgrid"><button class="dz" data-d="1"><span class="num">1</span><span><b>Orotic aciduria</b><small>UMP synthase</small></span></button><button class="dz" data-d="2"><span class="num">2</span><span><b>G6PD def.</b><small>G6PD (hemolysis, ↑ metHb)</small></span></button><button class="dz" data-d="3"><span class="num">3</span><span><b>Lesch-Nyhan syndrome</b><small>HGPRT</small></span></button><button class="dz" data-d="4"><span class="num">4</span><span><b>SCID (ADA deficiency)</b><small>Adenosine deaminase</small></span></button><button class="dz" data-d="5"><span class="num">5</span><span><b>OTC deficiency</b><small>Ornithine transcarbamylase</small></span></button><button class="dz" data-d="6"><span class="num">6</span><span><b>Phenylketonuria</b><small>Phe hydroxylase or BH4 recycling (musty odor: phenylacetate)</small></span></button><button class="dz" data-d="7"><span class="num">7</span><span><b>Alkaptonuria</b><small>Homogentisate oxidase</small></span></button><button class="dz" data-d="8"><span class="num">8</span><span><b>Albinism</b><small>Tyrosinase</small></span></button><button class="dz" data-d="9"><span class="num">9</span><span><b>MODY (glucokinase)</b><small>Glucokinase</small></span></button><button class="dz" data-d="10"><span class="num">10</span><span><b>Von Gierke disease (GSD I)</b><small>Glucose-6-phosphatase</small></span></button><button class="dz" data-d="11"><span class="num">11</span><span><b>Pyruvate kinase deficiency</b><small>Pyruvate kinase</small></span></button><button class="dz" data-d="12"><span class="num">12</span><span><b>PDH deficiency / Leigh</b><small>Pyruvate dehydrogenase (lactic acidosis)</small></span></button><button class="dz" data-d="13"><span class="num">13</span><span><b>Lactose intolerance</b><small>Lactase</small></span></button><button class="dz" data-d="14"><span class="num">14</span><span><b>Galactokinase deficiency</b><small>Galactokinase</small></span></button><button class="dz" data-d="15"><span class="num">15</span><span><b>Classic galactosemia</b><small>Galactose-1-P uridyltransferase</small></span></button><button class="dz" data-d="16"><span class="num">16</span><span><b>Essential fructosuria</b><small>Fructokinase</small></span></button><button class="dz" data-d="17"><span class="num">17</span><span><b>Hereditary fructose intolerance</b><small>Aldolase B</small></span></button><button class="dz" data-d="18"><span class="num">18</span><span><b>Systemic primary carnitine deficiency</b><small>Carnitine transporter (OCTN2)</small></span></button><button class="dz" data-d="19"><span class="num">19</span><span><b>MCAD deficiency</b><small>Medium-chain acyl-CoA DH</small></span></button><button class="dz" data-d="20"><span class="num">20</span><span><b>Maple syrup urine disease</b><small>Branched-chain α-ketoacid DH</small></span></button><button class="dz" data-d="21"><span class="num">21</span><span><b>Homocystinuria</b><small>Cystathionine β-synthase (also MTHFR, Met synthase)</small></span></button><button class="dz" data-d="22"><span class="num">22</span><span><b>Pompe disease (GSD II)</b><small>Lysosomal acid maltase</small></span></button><button class="dz" data-d="23"><span class="num">23</span><span><b>McArdle disease (GSD V)</b><small>Muscle glycogen phosphorylase</small></span></button><button class="dz" data-d="24"><span class="num">24</span><span><b>Cori disease (GSD III)</b><small>Debranching enzyme</small></span></button><button class="dz" data-d="25"><span class="num">25</span><span><b>Andersen disease (GSD IV)</b><small>Branching enzyme</small></span></button><button class="dz" data-d="26"><span class="num">26</span><span><b>CPS I deficiency (hyperammonemia I)</b><small>Carbamoyl phosphate synthetase I</small></span></button><button class="dz" data-d="27"><span class="num">27</span><span><b>Propionic acidemia</b><small>Propionyl-CoA carboxylase</small></span></button><button class="dz" data-d="28"><span class="num">28</span><span><b>Methylmalonic acidemia</b><small>Methylmalonyl-CoA mutase</small></span></button><button class="dz" data-d="29"><span class="num">29</span><span><b>HHH syndrome</b><small>Ornithine translocase</small></span></button><button class="dz" data-d="31"><span class="num">31</span><span><b>Tyrosinemia type II</b><small>Tyrosine aminotransferase</small></span></button><button class="dz" data-d="32"><span class="num">32</span><span><b>Tyrosinemia type I</b><small>Fumarylacetoacetate hydrolase (Rx nitisinone)</small></span></button><button class="dz" data-d="33"><span class="num">33</span><span><b>X-linked sideroblastic anemia</b><small>ALA synthase (Rx B6)</small></span></button><button class="dz" data-d="34"><span class="num">34</span><span><b>Lead poisoning</b><small>ALA dehydratase &amp; ferrochelatase</small></span></button><button class="dz" data-d="35"><span class="num">35</span><span><b>Acute intermittent porphyria</b><small>PBG deaminase</small></span></button><button class="dz" data-d="36"><span class="num">36</span><span><b>Porphyria cutanea tarda</b><small>Uroporphyrinogen decarboxylase</small></span></button><button class="dz" data-d="39"><span class="num">39</span><span><b>Asian flush</b><small>Aldehyde dehydrogenase 2 (ALDH2)</small></span></button><button class="dz" data-d="40"><span class="num">40</span><span><b>Tay-Sachs disease</b><small>Hexosaminidase A</small></span></button><button class="dz" data-d="41"><span class="num">41</span><span><b>Fabry disease</b><small>α-Galactosidase A (XR)</small></span></button><button class="dz" data-d="42"><span class="num">42</span><span><b>Metachromatic leukodystrophy</b><small>Arylsulfatase A</small></span></button><button class="dz" data-d="43"><span class="num">43</span><span><b>Krabbe disease</b><small>Galactocerebrosidase</small></span></button><button class="dz" data-d="44"><span class="num">44</span><span><b>Gaucher disease</b><small>Glucocerebrosidase</small></span></button><button class="dz" data-d="45"><span class="num">45</span><span><b>Niemann-Pick disease</b><small>Sphingomyelinase</small></span></button><button class="dz" data-d="46"><span class="num">46</span><span><b>Hurler syndrome</b><small>α-L-iduronidase</small></span></button><button class="dz" data-d="47"><span class="num">47</span><span><b>Hunter syndrome</b><small>Iduronate-2-sulfatase (XR)</small></span></button><button class="dz" data-d="38"><span class="num">38</span><span><b>Hers disease (GSD VI)</b><small>Liver glycogen phosphorylase</small></span></button></div>
+  </section>
+  <section class="cards">
+    <div class="card"><h3>Energy yield</h3><table>
+      <tr><td>Anaerobic glycolysis</td><td>2 ATP / glucose</td></tr>
+      <tr><td>Aerobic glycolysis (to pyruvate)</td><td>≈ 7 ATP (2 ATP + 2 NADH)</td></tr>
+      <tr><td>PDH (per pyruvate)</td><td>1 NADH ≈ 2.5 ATP</td></tr>
+      <tr><td>TCA (per acetyl-CoA)</td><td>3 NADH + FADH₂ + GTP ≈ 10 ATP</td></tr>
+      <tr><td>Complete oxidation of glucose</td><td>≈ 30–32 ATP</td></tr>
+      <tr><td>NADH / FADH₂</td><td>2.5 / 1.5 ATP</td></tr>
+      <tr><td>Gluconeogenesis cost</td><td>6 ATP-equivalents (4 ATP + 2 GTP)</td></tr>
+    </table></div>
+    <div class="card"><h3>Fuel use during fasting</h3><table>
+      <tr><td>Fed state</td><td>Glycolysis, glycogenesis, lipogenesis (insulin)</td></tr>
+      <tr><td>~4–16 h</td><td>Glycogenolysis</td></tr>
+      <tr><td>~16–48 h</td><td>Gluconeogenesis (lactate, alanine, glycerol)</td></tr>
+      <tr><td>2–5 days+</td><td>Lipolysis, β-oxidation, ketone bodies</td></tr>
+    </table></div>
+    <div class="card"><h3>Key inhibitors on the map</h3><table>
+      <tr><td>Statins</td><td>HMG-CoA reductase</td></tr>
+      <tr><td>Methotrexate, trimethoprim</td><td>Dihydrofolate reductase</td></tr>
+      <tr><td>5-Fluorouracil</td><td>Thymidylate synthase</td></tr>
+      <tr><td>Hydroxyurea</td><td>Ribonucleotide reductase</td></tr>
+      <tr><td>Leflunomide</td><td>Dihydroorotate dehydrogenase</td></tr>
+      <tr><td>Mycophenolate</td><td>IMP dehydrogenase</td></tr>
+      <tr><td>Allopurinol, febuxostat</td><td>Xanthine oxidase</td></tr>
+      <tr><td>Carbidopa</td><td>DOPA decarboxylase</td></tr>
+      <tr><td>Fluoride / fluoroacetate</td><td>Enolase / aconitase</td></tr>
+      <tr><td>Arsenite / malonate</td><td>PDH &amp; α-KG DH / succinate DH</td></tr>
+    </table></div>
+    <div class="card"><h3>Cofactor shortcuts</h3><table>
+      <tr><td>B1, B2, B3, B5 (+ lipoic acid)</td><td>PDH, α-KG DH, branched-chain α-ketoacid DH</td></tr>
+      <tr><td>B1 alone</td><td>Transketolase</td></tr>
+      <tr><td>B7 (carboxylases)</td><td>Pyruvate (anaplerotic), acetyl-CoA, propionyl-CoA carboxylase</td></tr>
+      <tr><td>B12</td><td>Methylmalonyl-CoA mutase, methionine synthase</td></tr>
+      <tr><td>B6</td><td>Transaminases, decarboxylases, CBS, cystathionase, glycogen phosphorylase</td></tr>
+    </table></div>
+  </section>
+</main>
+<script>
+(function(){
+  const svg = document.getElementById('map'), wrap = document.getElementById('wrap');
+  const VW = 2300; let z = 1;
+  function fit(){ z = Math.max(0.3, (wrap.clientWidth-2)/VW); apply(); }
+  function apply(){ svg.style.width = (VW*z)+'px'; svg.style.height = (3364*z)+'px'; }
+  document.getElementById('zi').onclick = ()=>{ zoomAt(1.25); };
+  document.getElementById('zo').onclick = ()=>{ zoomAt(0.8); };
+  document.getElementById('zf').onclick = fit;
+  function zoomAt(f){
+    const cx = (wrap.scrollLeft + wrap.clientWidth/2)/z, cy = (wrap.scrollTop + wrap.clientHeight/2)/z;
+    z = Math.min(3, Math.max(0.3, z*f)); apply();
+    wrap.scrollLeft = cx*z - wrap.clientWidth/2; wrap.scrollTop = cy*z - wrap.clientHeight/2;
+  }
+  window.addEventListener('resize', ()=>{});
+  // drag to pan
+  let d=null;
+  wrap.addEventListener('pointerdown', e=>{ if(e.button!==0) return; d={x:e.clientX,y:e.clientY,l:wrap.scrollLeft,t:wrap.scrollTop,m:false}; });
+  window.addEventListener('pointermove', e=>{ if(!d) return; const dx=e.clientX-d.x, dy=e.clientY-d.y; if(Math.abs(dx)+Math.abs(dy)>4){d.m=true; wrap.classList.add('drag');} wrap.scrollLeft=d.l-dx; wrap.scrollTop=d.t-dy; });
+  window.addEventListener('pointerup', ()=>{ if(d&&d.m){ wrap.dataset.dragged='1'; setTimeout(()=>delete wrap.dataset.dragged,0);} d=null; wrap.classList.remove('drag'); });
+
+  const enz = [...svg.querySelectorAll('.enz')];
+  function clear(){ svg.classList.remove('dim'); enz.forEach(g=>g.classList.remove('hl')); document.querySelectorAll('.dz.on,.vit.on').forEach(b=>b.classList.remove('on')); }
+  function highlight(match, btn, scroll){
+    const was = btn && btn.classList.contains('on');
+    clear(); if (was) return;
+    const hits = enz.filter(match);
+    if (!hits.length) return;
+    svg.classList.add('dim'); hits.forEach(g=>g.classList.add('hl')); if(btn) btn.classList.add('on');
+    if (scroll){
+      const b = hits[0].getBBox();
+      if (z < 1) { z = 1; apply(); }
+      wrap.scrollTo({left: (b.x+b.width/2)*z - wrap.clientWidth/2, top:(b.y+b.height/2)*z - wrap.clientHeight/2, behavior:'smooth'});
+      wrap.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+  }
+  document.querySelectorAll('.dz').forEach(b=>b.onclick=()=>{ const d=b.dataset.d; highlight(g=>g.dataset.dz.split(' ').includes(d), b, true); });
+  document.querySelectorAll('.vit').forEach(b=>b.onclick=()=>{ const v=b.dataset.v; highlight(g=>g.dataset.vit.split(' ').includes(v), b, false); });
+  document.getElementById('clr').onclick = clear;
+  svg.addEventListener('click', e=>{
+    if (wrap.dataset.dragged) return;
+    const badge = e.target.closest('.badge');
+    if (badge){ const b=document.querySelector('.dz[data-d="'+badge.dataset.d+'"]'); if(b){ b.click(); } }
+  });
+  fit();
+})();
+</script>
+</body>
+</html>

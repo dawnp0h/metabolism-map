@@ -16,7 +16,17 @@
   .tools { display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
   .tools .row { display:flex; gap:10px; align-items:center; }
   .find { display:flex; align-items:center; gap:2px; width:340px; height:40px; border:1px solid #e3e0d8; border-radius:10px; background:#fff; padding:0 4px 0 12px; }
+  .find { position:relative; }
   .find:focus-within { border-color:#b9b4a8; }
+  #fdd { display:none; position:absolute; top:44px; right:0; width:min(480px, 92vw); z-index:40; max-height:340px; overflow:auto; background:#fff; border:1px solid #e3e0d8; border-radius:10px; box-shadow:0 10px 28px rgba(0,0,0,.12); padding:4px; }
+  #fdd.open { display:block; }
+  #fdd .it { display:flex; justify-content:space-between; gap:10px; align-items:baseline; padding:7px 10px; border-radius:7px; cursor:pointer; font-size:14px; }
+  #fdd .it:hover, #fdd .it.act { background:#f3f1ec; }
+  #fdd .it .t { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); }
+  #fdd .it .t mark { background:#ffe46b; color:inherit; border-radius:2px; padding:0 1px; }
+  #fdd .it .t { flex:1 1 auto; min-width:0; }
+  #fdd .it .p { flex:0 1 auto; max-width:45%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; color:#8a9099; }
+  #fdd .none { padding:8px 10px; font-size:13px; color:#8a9099; }
   .find input { flex:1; min-width:0; border:0; outline:0; background:transparent; font:inherit; font-size:15px; color:var(--ink); }
   .find input::-webkit-search-cancel-button { cursor:pointer; }
   #fc { font-size:12.5px; color:#8a9099; padding:0 6px; white-space:nowrap; }
@@ -115,6 +125,7 @@
       <input id="fq" type="search" placeholder="Find enzyme, disease, substrate…" autocomplete="off" spellcheck="false" aria-label="Find on map">
       <span id="fc"></span>
       <button id="fp" aria-label="Previous match">↑</button><button id="fn" aria-label="Next match">↓</button>
+      <div id="fdd" role="listbox"></div>
     </div>
     <div class="row">
     <div class="seg">
@@ -1339,17 +1350,33 @@
   let fhl = document.createElementNS(NS, 'g'); fhl.id = 'findhl'; svg.appendChild(fhl);
   const texts = [...svg.querySelectorAll('text')].filter(t => !t.closest('#findhl'));
   let hits = [], cur = -1;
+  const fdd = document.getElementById('fdd');
+  const panels = [...svg.querySelectorAll('rect.panel')].map(r => { const x=+r.getAttribute('x'), y=+r.getAttribute('y'), w=+r.getAttribute('width'), h=+r.getAttribute('height');
+    const ts = [...svg.querySelectorAll('.ptitle')].filter(t => { const b=t.getBBox(); return b.x>=x-2 && b.x<=x+w && b.y>=y-2 && b.y<=y+60; });
+    return {x,y,w,h,name: ts.map(t=>t.textContent.trim()).join(' ').replace(/\s*\(.*$/, '')}; });
+  function panelOf(b){ const cx=b.x+b.width/2, cy=b.y+b.height/2; const p = panels.find(p => cx>=p.x && cx<=p.x+p.w && cy>=p.y && cy<=p.y+p.h); return p ? p.name : ''; }
+  const esc = x => x.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  function label(u){ const t = (u.textContent || '').replace(/\s+/g,' ').trim(); return t.length > 64 ? t.slice(0, 62) + '…' : t; }
+  function buildDD(q){
+    if (!q) { fdd.classList.remove('open'); return; }
+    if (!hits.length) { fdd.innerHTML = '<div class="none">No matches</div>'; fdd.classList.add('open'); return; }
+    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+    fdd.innerHTML = hits.map((u,k) => '<div class="it" data-k="'+k+'"><span class="t">' + esc(label(u)).replace(re, '<mark>$1</mark>') + '</span><span class="p">' + esc(panelOf(u.getBBox())) + '</span></div>').join('');
+    fdd.classList.add('open');
+  }
+  fdd.addEventListener('mousedown', e => { const it = e.target.closest('.it'); if (!it) return; e.preventDefault(); go(+it.dataset.k); fdd.classList.remove('open'); });
   const norm = x => x.toLowerCase().replace(/[₀-₉]/g, c => '0123456789'['₀₁₂₃₄₅₆₇₈₉'.indexOf(c)]).replace(/\s+/g, ' ');
   function unit(t){ const g = t.closest('.node'); return g || t; }
   function runFind(){
     fhl.innerHTML = ''; hits = []; cur = -1;
     const q = norm(fq.value.trim());
-    if (q.length < 2) { fc.textContent = ''; return; }
+    if (q.length < 2) { fc.textContent = ''; buildDD(''); return; }
     const seen = new Set();
     texts.forEach(t => { if (norm(t.textContent).includes(q)) { const u = unit(t); if (!seen.has(u)) { seen.add(u); hits.push(u); } } });
     hits.sort((a,b) => { const A=a.getBBox(), B=b.getBBox(); return (A.y-B.y) || (A.x-B.x); });
     hits.forEach(u => { const b = u.getBBox(); const r = document.createElementNS(NS,'rect');
       r.setAttribute('x', b.x-4); r.setAttribute('y', b.y-3); r.setAttribute('width', b.width+8); r.setAttribute('height', b.height+6); fhl.appendChild(r); });
+    buildDD(fq.value.trim());
     if (!hits.length) { fc.textContent = 'No matches'; return; }
     go(0);
   }
@@ -1357,13 +1384,21 @@
     if (!hits.length) return;
     cur = (i + hits.length) % hits.length;
     [...fhl.children].forEach((r,k) => r.classList.toggle('cur', k === cur));
+    [...fdd.querySelectorAll('.it')].forEach((it,k) => { it.classList.toggle('act', k === cur); if (k === cur) it.scrollIntoView({block:'nearest'}); });
     fc.textContent = (cur+1) + ' / ' + hits.length;
     const b = hits[cur].getBBox();
     if (z < 0.9) { z = 1; apply(); }
     wrap.scrollTo({left:(b.x+b.width/2)*z - wrap.clientWidth/2, top:(b.y+b.height/2)*z - wrap.clientHeight/2, behavior:'smooth'});
   }
   let ft; fq.addEventListener('input', () => { clearTimeout(ft); ft = setTimeout(runFind, 180); });
-  fq.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (cur < 0) runFind(); else go(cur + (e.shiftKey ? -1 : 1)); } if (e.key === 'Escape') { fq.value=''; runFind(); fq.blur(); } });
+  fq.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); fdd.classList.add('open'); go(cur + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); fdd.classList.add('open'); go(cur - 1); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (cur < 0) runFind(); else if (fdd.classList.contains('open')) fdd.classList.remove('open'); else go(cur + (e.shiftKey ? -1 : 1)); }
+    else if (e.key === 'Escape') { if (fdd.classList.contains('open')) fdd.classList.remove('open'); else { fq.value=''; runFind(); fq.blur(); } }
+  });
+  fq.addEventListener('focus', () => { if (fq.value.trim().length >= 2) fdd.classList.add('open'); });
+  fq.addEventListener('blur', () => setTimeout(() => fdd.classList.remove('open'), 120));
   document.getElementById('fn').onclick = () => go(cur+1);
   document.getElementById('fp').onclick = () => go(cur-1);
   document.addEventListener('keydown', e => { if (e.key === '/' && document.activeElement !== fq) { e.preventDefault(); fq.focus(); } });

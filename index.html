@@ -10,22 +10,25 @@
   :root { --ink:#1f2328; --muted:#5f6670; --bg:#fbfaf7; --line:#d9d6cf; --accent:#c0392b; }
   * { box-sizing:border-box; }
   body { margin:0; font-family:Inter, system-ui, sans-serif; color:var(--ink); background:var(--bg); }
-  header { padding:20px 24px 8px; display:flex; flex-wrap:wrap; gap:12px 28px; align-items:flex-end; justify-content:space-between; }
-  h1 { font-size:22px; margin:0; letter-spacing:-.01em; }
-  header p { margin:4px 0 0; color:var(--muted); font-size:16.2px; max-width:720px; }
-  .tools { display:flex; gap:6px; align-items:center; }
-  .tools button { font:inherit; font-size:17px; font-weight:600; border:1px solid var(--line); background:#fff; border-radius:10px; padding:10px 18px; min-width:48px; cursor:pointer; }
-  .tools button:hover { background:#f1efe9; }
-  .tools #zf, .tools #clr { font-size:21px; font-weight:700; padding:13px 26px; border-radius:12px; }
-  .tools #zf, .tools #clr { font-size:20px; font-weight:700; padding:13px 26px; border-radius:12px; border-width:1.5px; }
-  .legend { padding:4px 24px 10px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:15.0px; }
-  .legend .lab { color:var(--muted); margin-right:4px; }
-  .vit { font:inherit; font-size:15.0px; border:1px solid var(--line); background:#fff; border-radius:999px; padding:4px 10px 4px 7px; cursor:pointer; display:inline-flex; gap:6px; align-items:center; }
-  .vit.on { border-color:#222; background:#222; color:#fff; }
-  .dot { width:11px; height:11px; border-radius:50%; display:inline-block; }
-  .key { display:inline-flex; gap:6px; align-items:center; margin-left:10px; color:var(--muted); }
-  .key .b { background:#5d7f8f; color:#fff; font-size:10.5px; padding:0 4px; border-radius:3px; font-weight:600; }
-  #wrap { margin:0 16px; border:1px solid var(--line); border-radius:12px; background:#fff; overflow:auto; height:78vh; cursor:grab; }
+  header { padding:22px 28px 6px; display:flex; flex-wrap:wrap; gap:12px 28px; align-items:center; justify-content:space-between; }
+  h1 { font-size:21px; font-weight:600; margin:0; letter-spacing:-.015em; }
+  header p { margin:3px 0 0; color:var(--muted); font-size:13.5px; }
+  .tools { display:flex; gap:10px; align-items:center; }
+  .seg { display:inline-flex; border:1px solid #e3e0d8; border-radius:10px; background:#fff; overflow:hidden; }
+  .seg button { font:inherit; font-size:15px; font-weight:500; color:var(--ink); border:0; background:transparent; height:40px; min-width:44px; padding:0 14px; cursor:pointer; }
+  .seg button + button { border-left:1px solid #eeebe4; }
+  .seg button:hover, .ghost:hover { background:#f3f1ec; }
+  .ghost { font:inherit; font-size:15px; font-weight:500; color:var(--muted); border:0; background:transparent; height:40px; padding:0 12px; border-radius:10px; cursor:pointer; }
+  .legend { padding:8px 28px 12px; display:flex; flex-wrap:wrap; gap:4px; align-items:center; font-size:13.5px; }
+  .legend .lab { color:var(--muted); margin-right:6px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
+  .vit { font:inherit; font-size:13.5px; color:var(--ink); border:0; background:transparent; border-radius:999px; padding:5px 9px 5px 7px; cursor:pointer; display:inline-flex; gap:6px; align-items:center; }
+  .vit:hover { background:#f0eee8; }
+  .vit.on { background:#1f2328; color:#fff; }
+  .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .keys { margin:5px 0 0 !important; display:flex; gap:14px; color:#8a9099; font-size:12.5px; }
+  .key { display:inline-flex; gap:5px; align-items:center; }
+  .key .b { background:#5d7f8f; color:#fff; font-size:10px; padding:0 4px; border-radius:3px; font-weight:600; }
+  #wrap { margin:0 20px; border:1px solid #e8e5de; border-radius:12px; background:#fff; overflow:auto; height:78vh; cursor:grab; }
   #wrap.drag { cursor:grabbing; }
   #map { display:block; font-family:Inter, system-ui, sans-serif; }
   .panel { stroke:none; }
@@ -94,19 +97,19 @@
 <header>
   <div>
     <h1>Integrated Metabolism Map</h1>
-    <p>Pathways, enzymes, inherited disorders (numbered) and vitamin cofactors on one page. Click a disorder or vitamin to highlight where it acts. ★ = rate-limiting / key regulated step. Drag to pan.</p>
+    <p>Click a vitamin or disorder to highlight it · hover a panel title for exam patterns</p>
+    <p class="keys"><span class="key"><span class="b">#</span> disorder</span><span class="key"><span style="color:#b03a2e">red</span> enzyme / inhibitor</span><span class="key">- - - indirect / transport</span><span class="key">★ rate-limiting</span></p>
   </div>
   <div class="tools">
-    <button id="zo" aria-label="Zoom out">−</button>
-    <button id="zf">Fit</button>
-    <button id="zi" aria-label="Zoom in">+</button>
-    <button id="clr">Clear highlight</button>
+    <div class="seg">
+      <button id="zo" aria-label="Zoom out">−</button>
+      <button id="zf">Fit</button>
+      <button id="zi" aria-label="Zoom in">+</button>
+    </div>
+    <button id="clr" class="ghost">Clear</button>
   </div>
 </header>
-<div class="legend"><span class="lab">Cofactors:</span><button class="vit" data-v="B1"><span class="dot" style="background:#e8692c"></span>Thiamine (B1)</button><button class="vit" data-v="B2"><span class="dot" style="background:#4e8d8a"></span>Riboflavin (B2)</button><button class="vit" data-v="B3"><span class="dot" style="background:#f2a93b"></span>Niacin (B3)</button><button class="vit" data-v="B5"><span class="dot" style="background:#6b4ea0"></span>Pantothenic acid (B5)</button><button class="vit" data-v="B6"><span class="dot" style="background:#d6338a"></span>Pyridoxine (B6)</button><button class="vit" data-v="B7"><span class="dot" style="background:#2f3542"></span>Biotin (B7)</button><button class="vit" data-v="B9"><span class="dot" style="background:#3aa6dd"></span>Folate (B9)</button><button class="vit" data-v="B12"><span class="dot" style="background:#9bb52f"></span>Cobalamin (B12)</button>
-  <span class="key"><span class="b">#</span> disorder</span>
-  <span class="key"><span style="color:#b03a2e">red</span> enzyme / inhibitor</span>
-  <span class="key">- - - indirect / transport</span>
+<div class="legend"><span class="lab">Cofactors</span><button class="vit" data-v="B1"><span class="dot" style="background:#e8692c"></span>Thiamine (B1)</button><button class="vit" data-v="B2"><span class="dot" style="background:#4e8d8a"></span>Riboflavin (B2)</button><button class="vit" data-v="B3"><span class="dot" style="background:#f2a93b"></span>Niacin (B3)</button><button class="vit" data-v="B5"><span class="dot" style="background:#6b4ea0"></span>Pantothenic acid (B5)</button><button class="vit" data-v="B6"><span class="dot" style="background:#d6338a"></span>Pyridoxine (B6)</button><button class="vit" data-v="B7"><span class="dot" style="background:#2f3542"></span>Biotin (B7)</button><button class="vit" data-v="B9"><span class="dot" style="background:#3aa6dd"></span>Folate (B9)</button><button class="vit" data-v="B12"><span class="dot" style="background:#9bb52f"></span>Cobalamin (B12)</button>
 </div>
 <div id="wrap"><svg id="map" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2300 3364" role="img" aria-label="Integrated map of human metabolic pathways with enzymes, inherited disorders and vitamin cofactors">
 <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#3b3b3b"/></marker><marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#c0392b"/></marker></defs>

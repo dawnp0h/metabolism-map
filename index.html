@@ -1068,7 +1068,7 @@
 <text x="1823.2" y="2707.5" class="note" style="font-size:10.5px">Heme ⊖ ALA synthase (feedback inhibition)</text>
 <text x="1823.2" y="2722.0" class="note" style="font-size:10.5px">Neurovisceral: AIP · Cutaneous: PCT</text>
 </g>
-<g class="enz">
+<g class="tcaprod">
 <text x="1343" y="1301" text-anchor="start" style="font-size:11px;font-weight:700;fill:#1f6f8b">NADH</text>
 <text x="1343" y="1421" text-anchor="start" style="font-size:11px;font-weight:700;fill:#1f6f8b">NADH</text>
 <text x="1243" y="1503" text-anchor="start" style="font-size:11px;font-weight:700;fill:#1f6f8b">GTP</text>
@@ -1288,8 +1288,8 @@
       wrap.scrollIntoView({behavior:'smooth', block:'nearest'});
     }
   }
-  document.querySelectorAll('.dz').forEach(b=>b.onclick=()=>{ const d=b.dataset.d; highlight(g=>g.dataset.dz.split(' ').includes(d), b, true); });
-  document.querySelectorAll('.vit').forEach(b=>b.onclick=()=>{ const v=b.dataset.v; highlight(g=>g.dataset.vit.split(' ').includes(v), b, false); });
+  document.querySelectorAll('.dz').forEach(b=>b.onclick=()=>{ const d=b.dataset.d; highlight(g=>(g.dataset.dz||'').split(' ').includes(d), b, true); });
+  document.querySelectorAll('.vit').forEach(b=>b.onclick=()=>{ const v=b.dataset.v; highlight(g=>(g.dataset.vit||'').split(' ').includes(v), b, false); });
   document.getElementById('clr').onclick = clear;
   svg.addEventListener('click', e=>{
     if (wrap.dataset.dragged) return;

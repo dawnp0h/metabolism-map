@@ -13,7 +13,17 @@
   header { padding:22px 28px 6px; display:flex; flex-wrap:wrap; gap:12px 28px; align-items:center; justify-content:space-between; }
   h1 { font-size:21px; font-weight:600; margin:0; letter-spacing:-.015em; }
   header p { margin:3px 0 0; color:var(--muted); font-size:13.5px; }
-  .tools { display:flex; gap:10px; align-items:center; }
+  .tools { display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+  .tools .row { display:flex; gap:10px; align-items:center; }
+  .find { display:flex; align-items:center; gap:2px; width:340px; height:40px; border:1px solid #e3e0d8; border-radius:10px; background:#fff; padding:0 4px 0 12px; }
+  .find:focus-within { border-color:#b9b4a8; }
+  .find input { flex:1; min-width:0; border:0; outline:0; background:transparent; font:inherit; font-size:15px; color:var(--ink); }
+  .find input::-webkit-search-cancel-button { cursor:pointer; }
+  #fc { font-size:12.5px; color:#8a9099; padding:0 6px; white-space:nowrap; }
+  .find button { font:inherit; font-size:14px; color:var(--muted); border:0; background:transparent; width:30px; height:30px; border-radius:7px; cursor:pointer; }
+  .find button:hover { background:#f3f1ec; }
+  #findhl rect { fill:#ffe46b; fill-opacity:.38; stroke:#e0b400; stroke-width:1.5; rx:4; pointer-events:none; }
+  #findhl rect.cur { fill:#ff9f1c; fill-opacity:.35; stroke:#e07000; stroke-width:3; }
   .seg { display:inline-flex; border:1px solid #e3e0d8; border-radius:10px; background:#fff; overflow:hidden; }
   .seg button { font:inherit; font-size:15px; font-weight:500; color:var(--ink); border:0; background:transparent; height:40px; min-width:44px; padding:0 14px; cursor:pointer; }
   .seg button + button { border-left:1px solid #eeebe4; }
@@ -101,12 +111,19 @@
     <p class="keys"><span class="key"><span class="b">#</span> disorder</span><span class="key"><span style="color:#b03a2e">red</span> enzyme / inhibitor</span><span class="key">- - - indirect / transport</span><span class="key">★ rate-limiting</span></p>
   </div>
   <div class="tools">
+    <div class="find">
+      <input id="fq" type="search" placeholder="Find enzyme, disease, substrate…" autocomplete="off" spellcheck="false" aria-label="Find on map">
+      <span id="fc"></span>
+      <button id="fp" aria-label="Previous match">↑</button><button id="fn" aria-label="Next match">↓</button>
+    </div>
+    <div class="row">
     <div class="seg">
       <button id="zo" aria-label="Zoom out">−</button>
       <button id="zf">Fit</button>
       <button id="zi" aria-label="Zoom in">+</button>
     </div>
     <button id="clr" class="ghost">Clear</button>
+    </div>
   </div>
 </header>
 <div class="legend"><span class="lab">Cofactors</span><button class="vit" data-v="B1"><span class="dot" style="background:#e8692c"></span>Thiamine (B1)</button><button class="vit" data-v="B2"><span class="dot" style="background:#4e8d8a"></span>Riboflavin (B2)</button><button class="vit" data-v="B3"><span class="dot" style="background:#f2a93b"></span>Niacin (B3)</button><button class="vit" data-v="B5"><span class="dot" style="background:#6b4ea0"></span>Pantothenic acid (B5)</button><button class="vit" data-v="B6"><span class="dot" style="background:#d6338a"></span>Pyridoxine (B6)</button><button class="vit" data-v="B7"><span class="dot" style="background:#2f3542"></span>Biotin (B7)</button><button class="vit" data-v="B9"><span class="dot" style="background:#3aa6dd"></span>Folate (B9)</button><button class="vit" data-v="B12"><span class="dot" style="background:#9bb52f"></span>Cobalamin (B12)</button>
@@ -1315,6 +1332,43 @@
     const badge = e.target.closest('.badge');
     if (badge){ const b=document.querySelector('.dz[data-d="'+badge.dataset.d+'"]'); if(b){ b.click(); } }
   });
+
+  // ---- find ----
+  const fq = document.getElementById('fq'), fc = document.getElementById('fc');
+  const NS = 'http://www.w3.org/2000/svg';
+  let fhl = document.createElementNS(NS, 'g'); fhl.id = 'findhl'; svg.appendChild(fhl);
+  const texts = [...svg.querySelectorAll('text')].filter(t => !t.closest('#findhl'));
+  let hits = [], cur = -1;
+  const norm = x => x.toLowerCase().replace(/[₀-₉]/g, c => '0123456789'['₀₁₂₃₄₅₆₇₈₉'.indexOf(c)]).replace(/\s+/g, ' ');
+  function unit(t){ const g = t.closest('.node'); return g || t; }
+  function runFind(){
+    fhl.innerHTML = ''; hits = []; cur = -1;
+    const q = norm(fq.value.trim());
+    if (q.length < 2) { fc.textContent = ''; return; }
+    const seen = new Set();
+    texts.forEach(t => { if (norm(t.textContent).includes(q)) { const u = unit(t); if (!seen.has(u)) { seen.add(u); hits.push(u); } } });
+    hits.sort((a,b) => { const A=a.getBBox(), B=b.getBBox(); return (A.y-B.y) || (A.x-B.x); });
+    hits.forEach(u => { const b = u.getBBox(); const r = document.createElementNS(NS,'rect');
+      r.setAttribute('x', b.x-4); r.setAttribute('y', b.y-3); r.setAttribute('width', b.width+8); r.setAttribute('height', b.height+6); fhl.appendChild(r); });
+    if (!hits.length) { fc.textContent = 'No matches'; return; }
+    go(0);
+  }
+  function go(i){
+    if (!hits.length) return;
+    cur = (i + hits.length) % hits.length;
+    [...fhl.children].forEach((r,k) => r.classList.toggle('cur', k === cur));
+    fc.textContent = (cur+1) + ' / ' + hits.length;
+    const b = hits[cur].getBBox();
+    if (z < 0.9) { z = 1; apply(); }
+    wrap.scrollTo({left:(b.x+b.width/2)*z - wrap.clientWidth/2, top:(b.y+b.height/2)*z - wrap.clientHeight/2, behavior:'smooth'});
+  }
+  let ft; fq.addEventListener('input', () => { clearTimeout(ft); ft = setTimeout(runFind, 180); });
+  fq.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (cur < 0) runFind(); else go(cur + (e.shiftKey ? -1 : 1)); } if (e.key === 'Escape') { fq.value=''; runFind(); fq.blur(); } });
+  document.getElementById('fn').onclick = () => go(cur+1);
+  document.getElementById('fp').onclick = () => go(cur-1);
+  document.addEventListener('keydown', e => { if (e.key === '/' && document.activeElement !== fq) { e.preventDefault(); fq.focus(); } });
+  const _clr = document.getElementById('clr').onclick;
+  document.getElementById('clr').onclick = () => { _clr(); fq.value=''; runFind(); };
   fit();
 })();
 </script>

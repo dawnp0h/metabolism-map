@@ -685,7 +685,7 @@ text.tmask, text.tmask tspan { fill:transparent !important; }
 <g class="enz" data-k="r5p&gt;prpp_h&gt;PRPP" data-ei="20" data-dz="" data-vit=""><rect class="lbg" x="856.0" y="252.0" width="70.6" height="33.0" rx="3"/><text x="858.0" y="262.0" class="et">PRPP</text><text x="858.0" y="277.5" class="et">synthetase</text></g>
 <g class="enz" data-k="prpp&gt;imp&gt;PRPP amidotransferase ★" data-ei="22" data-dz="" data-vit=""><rect class="lbg" x="682.2" y="482" width="161.8" height="48.5" rx="3"/><text x="684.2" y="492" class="et">PRPP amidotransferase ★</text><text x="684.2" y="507.5" class="et">(+ glutamine;</text><text x="684.2" y="523" class="et">⊖ AMP/GMP, 6-MP)</text></g>
 <g class="enz" data-k="imp&gt;gmp&gt;IMP DH (⊖" data-ei="24" data-dz="" data-vit=""><rect class="lbg" x="882.0" y="519" width="101.2" height="33.0" rx="3"/><text x="884.0" y="529" class="et">IMP DH (⊖</text><text x="884.0" y="544.5" class="et">mycophenolate)</text></g>
-<g class="enz" data-k="prpp&gt;prpp_p&gt;to pyrimidine synthesis" data-ei="25" data-dz="" data-vit=""><rect class="lbg" x="662.0" y="447" width="143.4" height="17.5" rx="3"/><text x="664.0" y="457" class="et">to pyrimidine synthesis</text></g>
+<g class="enz" data-k="prpp&gt;prpp_p&gt;to pyrimidine" data-ei="25" data-dz="" data-vit=""><rect class="lbg" x="684.0" y="428" width="82.4" height="33.0" rx="3"/><text x="686.0" y="438" class="et">to pyrimidine</text><text x="686.0" y="453.5" class="et">synthesis</text></g>
 <g class="enz" data-k="amp&gt;amp_s&gt;to salvage &amp;" data-ei="26" data-dz="" data-vit=""><rect class="lbg" x="778.0" y="653" width="77.5" height="33.0" rx="3"/><text x="780.0" y="663" class="et">to salvage &amp;</text><text x="780.0" y="678.5" class="et">breakdown</text></g>
 <g class="enz" data-k="gua&gt;gmp_s&gt;HGPRT" data-ei="30" data-dz="3" data-vit=""><rect class="lbg" x="207.8" y="890" width="96.5" height="33.0" rx="3"/><text x="209.8" y="900" class="et">HGPRT</text><g class="badge" data-d="3"><rect x="209.8" y="904.5" width="18" height="15" rx="2"/><text x="218.8" y="916.5">3</text></g><text x="229.8" y="916.5" class="dzname">Lesch-Nyhan</text></g>
 <g class="enz" data-k="amp_s&gt;imp_s&gt;AMP deaminase" data-ei="34" data-dz="" data-vit=""><rect class="lbg" x="544.2" y="768" width="101.6" height="17.5" rx="3"/><text x="546.2" y="778" class="et">AMP deaminase</text></g>
@@ -1471,9 +1471,12 @@ text.tmask, text.tmask tspan { fill:transparent !important; }
       x.addEventListener('click', e => { if (!r.classList.contains('peek') || r.style.display === 'none') return; e.stopPropagation(); r.classList.remove('peek'); x.classList.add('tmask'); });
       x.parentNode.insertBefore(r, x.nextSibling); return r; });
     const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'eyebtn');
-    const ADJ = {'Purine synthesis':[0,-6], 'Purine salvage & breakdown':[6,0]}; const d = ADJ[name] || [0,0]; const endA = t.getAttribute('text-anchor') === 'end'; const x = (endA ? tb.x - 44 : tb.x + tb.width + 10) + d[0], y = tb.y + tb.height/2 - 13 + d[1];
+    const ADJ = {'Purine salvage & breakdown':[6,0]}; const d = ADJ[name] || [0,0]; const endA = t.getAttribute('text-anchor') === 'end';
+    let x = (endA ? tb.x - 40 : tb.x + tb.width + 9) + d[0], y = tb.y + tb.height/2 - 11 + d[1];
+    if (x + 30 > p.x + p.w - 6) { x = tb.x; y = tb.y + tb.height + 5; }
+    y = Math.max(y, p.y + 5);
     g.setAttribute('transform', 'translate(' + x + ',' + y + ')');
-    g.innerHTML = '<title>Hide / show substrate names</title><rect width="34" height="26" rx="7"/><g transform="translate(5,1) scale(1)"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line class="slash" x1="3" y1="3" x2="21" y2="21" style="display:none"/></g>';
+    g.innerHTML = '<title>Hide / show substrate names</title><rect width="30" height="22" rx="6"/><g transform="translate(5,2) scale(0.83)"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line class="slash" x1="3" y1="3" x2="21" y2="21" style="display:none"/></g>';
     t.parentNode.insertBefore(g, t.nextSibling);
     let on = false;
     g.addEventListener('click', e => { e.stopPropagation(); on = !on; g.classList.toggle('on', on);

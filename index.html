@@ -112,6 +112,18 @@
 #xtip td:nth-child(2) { color: #1f4e9c; font-weight: 600; width: 27%; }
 #xtip td:nth-child(3) { width: 30%; }
 #xtip .hint { margin-top: 6px; font-size: 11px; color: #999; }
+</style><style>
+.eyebtn { cursor:pointer; }
+.eyebtn rect { fill:#fff; stroke:#d4cfc4; stroke-width:1; }
+.eyebtn:hover rect { fill:#f3f1ec; }
+.eyebtn path, .eyebtn circle, .eyebtn line { fill:none; stroke:#4a4f57; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.eyebtn.on rect { fill:#1f2328; stroke:#1f2328; }
+.eyebtn.on path, .eyebtn.on circle, .eyebtn.on line { stroke:#fff; }
+.node.masked text { fill:transparent !important; }
+.node.masked rect { fill:#f1eee6 !important; stroke-dasharray:4 3; cursor:pointer; }
+.node.masked { cursor:pointer; }
+.node.masked.peek text { fill:#1f6f8b !important; }
+.node.masked.peek rect { fill:#fff !important; stroke-dasharray:none; }
 </style></head>
 <body>
 <header>
@@ -1437,6 +1449,28 @@
   tip.addEventListener('mouseleave', hideSoon);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { pinned = null; tip.style.display = 'none'; } });
   document.addEventListener('click', e => { if (pinned && !tip.contains(e.target) && !e.target.closest('.ptitle')) { pinned = null; tip.style.display = 'none'; } });
+})();
+</script><script>
+(function(){
+  const NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('map');
+  const STUDY = ["Pyrimidine synthesis"];
+  const panels = [...svg.querySelectorAll('rect.panel')].map(r => ({x:+r.getAttribute('x'), y:+r.getAttribute('y'), w:+r.getAttribute('width'), h:+r.getAttribute('height')}));
+  const inP = (p, b) => { const cx=b.x+b.width/2, cy=b.y+b.height/2; return cx>=p.x && cx<=p.x+p.w && cy>=p.y && cy<=p.y+p.h; };
+  svg.querySelectorAll('.ptitle').forEach(t => {
+    const name = t.textContent.trim(); if (!STUDY.includes(name)) return;
+    const tb = t.getBBox(); const p = panels.find(pp => inP(pp, tb)); if (!p) return;
+    const nodes = [...svg.querySelectorAll('.node')].filter(n => inP(p, n.getBBox()));
+    const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'eyebtn');
+    const x = tb.x + tb.width + 10, y = tb.y + tb.height/2 - 13;
+    g.setAttribute('transform', 'translate(' + x + ',' + y + ')');
+    g.innerHTML = '<title>Hide / show substrate names</title><rect width="34" height="26" rx="7"/><g transform="translate(5,1) scale(1)"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line class="slash" x1="3" y1="3" x2="21" y2="21" style="display:none"/></g>';
+    t.parentNode.insertBefore(g, t.nextSibling);
+    let on = false;
+    g.addEventListener('click', e => { e.stopPropagation(); on = !on; g.classList.toggle('on', on);
+      g.querySelector('.slash').style.display = on ? '' : 'none';
+      nodes.forEach(n => { n.classList.toggle('masked', on); n.classList.remove('peek'); }); });
+    nodes.forEach(n => n.addEventListener('click', e => { if (!n.classList.contains('masked')) return; e.stopPropagation(); n.classList.toggle('peek'); }));
+  });
 })();
 </script></body>
 </html>

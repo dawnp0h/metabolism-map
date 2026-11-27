@@ -124,6 +124,9 @@
 .node.masked { cursor:pointer; }
 .node.masked.peek text { fill:#1f6f8b !important; }
 .node.masked.peek rect { fill:#fff !important; stroke-dasharray:none; }
+text.tmask, text.tmask tspan { fill:transparent !important; }
+.tcover { fill:#f6e4e0; stroke:#d99a90; stroke-width:1; stroke-dasharray:4 3; cursor:pointer; }
+.tcover.peek { display:none; }
 </style></head>
 <body>
 <header>
@@ -1460,6 +1463,13 @@
     const name = t.textContent.trim(); if (!STUDY.includes(name)) return;
     const tb = t.getBBox(); const p = panels.find(pp => inP(pp, tb)); if (!p) return;
     const nodes = [...svg.querySelectorAll('.node')].filter(n => inP(p, n.getBBox()));
+    const isRed = el => { const f = getComputedStyle(el).fill.replace(/ /g,''); return f === 'rgb(176,58,46)' || f === 'rgb(192,57,43)'; };
+    const reds = [...svg.querySelectorAll('text')].filter(x => !x.closest('.mnemonic, .node, .badge, .eyebtn') && !x.classList.contains('ptitle') && inP(p, x.getBBox()) && (isRed(x) || [...x.querySelectorAll('tspan')].some(isRed)));
+    const covers = reds.map(x => { const b = x.getBBox(); const r = document.createElementNS(NS, 'rect');
+      r.setAttribute('class', 'tcover'); r.setAttribute('x', b.x-2); r.setAttribute('y', b.y-1); r.setAttribute('width', b.width+4); r.setAttribute('height', b.height+2); r.setAttribute('rx', 4); r.style.display = 'none';
+      r.addEventListener('click', e => { e.stopPropagation(); r.classList.add('peek'); x.classList.remove('tmask'); });
+      x.addEventListener('click', e => { if (!r.classList.contains('peek') || r.style.display === 'none') return; e.stopPropagation(); r.classList.remove('peek'); x.classList.add('tmask'); });
+      x.parentNode.insertBefore(r, x.nextSibling); return r; });
     const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'eyebtn');
     const x = tb.x + tb.width + 10, y = tb.y + tb.height/2 - 13;
     g.setAttribute('transform', 'translate(' + x + ',' + y + ')');
@@ -1468,7 +1478,8 @@
     let on = false;
     g.addEventListener('click', e => { e.stopPropagation(); on = !on; g.classList.toggle('on', on);
       g.querySelector('.slash').style.display = on ? '' : 'none';
-      nodes.forEach(n => { n.classList.toggle('masked', on); n.classList.remove('peek'); }); });
+      nodes.forEach(n => { n.classList.toggle('masked', on); n.classList.remove('peek'); });
+      reds.forEach((x, k) => { x.classList.toggle('tmask', on); covers[k].classList.remove('peek'); covers[k].style.display = on ? '' : 'none'; }); });
     nodes.forEach(n => n.addEventListener('click', e => { if (!n.classList.contains('masked')) return; e.stopPropagation(); n.classList.toggle('peek'); }));
   });
 })();
